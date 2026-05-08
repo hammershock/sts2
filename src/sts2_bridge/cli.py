@@ -40,6 +40,13 @@ BaseUrlOption = Annotated[
 TimeoutOption = Annotated[float, typer.Option("--api-timeout", help="HTTP request timeout in seconds.")]
 StateLayerOption = Annotated[str, typer.Option("--layer", help="State layer: view, filtered, raw.")]
 
+REST_RECOVERY_TARGETS = {
+    "relic": (0.04, 0.67),
+    "top-bar-relic": (0.025, 0.30),
+    "rest-card": (0.41, 0.43),
+    "smith-card": (0.59, 0.43),
+}
+
 
 @app.callback()
 def main(
@@ -283,14 +290,19 @@ def recover_rest_command(
     api_timeout: TimeoutOption = 10.0,
     owner: Annotated[str, typer.Option("--owner", help="macOS window owner name to search for.")] = "Slay the Spire 2",
     window_id: Annotated[int | None, typer.Option("--window-id", help="Click a specific macOS window id.")] = None,
+    target: Annotated[
+        str,
+        typer.Option("--target", help="Recovery target: relic, top-bar-relic, rest-card, smith-card."),
+    ] = "relic",
     x: Annotated[
-        float,
-        typer.Option("--x", help="Normalized X coordinate for the top-left relic refresh click."),
-    ] = 0.04,
+        float | None,
+        typer.Option("--x", help="Override normalized X coordinate for the recovery click."),
+    ] = None,
     y: Annotated[
-        float,
-        typer.Option("--y", help="Normalized Y coordinate for the top-left relic refresh click."),
-    ] = 0.145,
+        float | None,
+        typer.Option("--y", help="Override normalized Y coordinate for the recovery click."),
+    ] = None,
+    double_click: Annotated[bool, typer.Option("--double-click", help="Send two clicks to the selected target.")] = False,
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Only report the resolved click and state check.")] = False,
     force: Annotated[bool, typer.Option("--force", help="Allow recovery outside REST/no-action states.")] = False,
 ) -> None:
@@ -319,19 +331,40 @@ def recover_rest_command(
                 retryable=False,
             )
 
-        click = click_window(x, y, owner=owner, window_id=window_id, normalized=True, dry_run=dry_run)
+        click_x, click_y = _rest_recovery_point(target, x, y)
+        clicks = [
+            click_window(click_x, click_y, owner=owner, window_id=window_id, normalized=True, dry_run=dry_run)
+        ]
+        if double_click and not dry_run:
+            time.sleep(0.15)
+            clicks.append(
+                click_window(click_x, click_y, owner=owner, window_id=window_id, normalized=True, dry_run=False)
+            )
         after: dict[str, Any] | None = None
+        status = "dry_run"
+        suggestions: list[str] = []
         if not dry_run:
             time.sleep(0.5)
-            after = _recovery_state_summary(client.state())
+            after_state = client.state()
+            after = _recovery_state_summary(after_state)
+            if _rest_recovery_resolved(after_state):
+                status = "recovered"
+            else:
+                status = "unchanged"
+                suggestions = _rest_recovery_suggestions(target)
 
         return _to_yaml(
             {
                 "recovery": "rest_relic_refresh_click",
+                "status": status,
                 "dry_run": dry_run,
+                "target": target,
+                "point": {"x": click_x, "y": click_y, "normalized": True},
                 "before": _recovery_state_summary(before),
-                "click": click,
+                "click": clicks[0],
+                "clicks": clicks,
                 "after": after,
+                "suggestions": suggestions,
             }
         )
 
@@ -768,6 +801,38 @@ def _recovery_state_summary(state: GameState) -> dict[str, Any]:
         "floor": _run_field(state, "floor"),
         "gold": _run_field(state, "gold"),
     }
+
+
+def _rest_recovery_point(target: str, x: float | None, y: float | None) -> tuple[float, float]:
+    if (x is None) != (y is None):
+        raise BridgeError(
+            "invalid_cli_arg",
+            "--x and --y must be provided together.",
+            details={"x": x, "y": y},
+            retryable=False,
+        )
+    if x is not None and y is not None:
+        return x, y
+    if target not in REST_RECOVERY_TARGETS:
+        raise BridgeError(
+            "invalid_cli_arg",
+            "--target must be one of: relic, top-bar-relic, rest-card, smith-card.",
+            details={"target": target},
+            retryable=False,
+        )
+    return REST_RECOVERY_TARGETS[target]
+
+
+def _rest_recovery_resolved(state: GameState) -> bool:
+    return state.screen != "REST" or not has_recovery_options(state)
+
+
+def _rest_recovery_suggestions(target: str) -> list[str]:
+    remaining_targets = [name for name in REST_RECOVERY_TARGETS if name != target]
+    suggestions = [f"try: sts2 debug recover-rest --target {name}" for name in remaining_targets]
+    suggestions.append("if visual UI is clickable, inspect a screenshot and use sts2 debug click-window with explicit coordinates")
+    suggestions.append("if every visual click fails, the REST desync is likely in the backend mod/API state")
+    return suggestions
 
 
 def _run_field(state: GameState, key: str) -> Any:

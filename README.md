@@ -88,4 +88,4 @@ For Godot/Metal windows, macOS may refuse true background window capture. Use `-
 
 `sts2 debug click-window X Y` is a last-resort macOS UI fallback when the HTTP API and structured state are stuck. Coordinates are relative to the selected game window; add `--normalized` to use 0..1 fractions and `--dry-run` to inspect the resolved screen point before clicking. It activates the game before clicking and restores the previous app by default. macOS may require Accessibility permission for the terminal app.
 
-`sts2 debug recover-rest` is a guarded version of the click fallback for the observed REST desync where clicking the top-left relic refreshes the UI/API state. It only runs on REST screens with no executable API actions unless `--force` is passed.
+`sts2 debug recover-rest` is a guarded version of the click fallback for observed REST desyncs. It reports whether the post-click state actually recovered; if not, it prints next target suggestions. Use `--target relic`, `--target top-bar-relic`, `--target rest-card`, or explicit `--x/--y` normalized coordinates when calibrating from screenshots.
