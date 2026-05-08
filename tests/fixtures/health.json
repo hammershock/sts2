@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "request_id": "req_test_health",
+  "data": {
+    "service": "sts2-ai-agent",
+    "mod_version": "0.4.0",
+    "protocol_version": "2026-03-11-v1",
+    "game_version": "v0.103.2",
+    "status": "ready"
+  }
+}

@@ -1,0 +1,11 @@
+fields:
+  state_version: state_version
+  run_id: run_id
+  screen: screen
+  in_combat: in_combat
+  turn: turn
+  available_actions: available_actions
+  floor: run.floor
+  gold: run.gold
+  summary:
+    transform: summary

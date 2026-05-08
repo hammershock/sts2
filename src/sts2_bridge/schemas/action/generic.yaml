@@ -1,0 +1,4 @@
+fields:
+  status: status
+  action: action
+  changes: changes

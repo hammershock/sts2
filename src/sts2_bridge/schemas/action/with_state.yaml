@@ -1,0 +1,3 @@
+extends: action/generic.yaml
+fields:
+  state: state

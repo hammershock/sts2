@@ -1,0 +1,6 @@
+extends: state/combat.yaml
+fields:
+  legal_actions:
+    fields:
+      screen: screen
+      available_actions: available_actions

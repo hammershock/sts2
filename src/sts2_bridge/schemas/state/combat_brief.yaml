@@ -1,0 +1,31 @@
+extends: state/common.yaml
+fields:
+  combat:
+    fields:
+      player:
+        fields:
+          hp:
+            transform: hp_pair
+            paths: [combat.player.current_hp, combat.player.max_hp]
+          block: combat.player.block
+          energy: combat.player.energy
+          stars: combat.player.stars
+      incoming_damage:
+        transform: incoming_damage
+      enemies:
+        list: combat.enemies
+        item:
+          fields:
+            index: index
+            name: name
+            hp:
+              transform: hp_pair
+              paths: [current_hp, max_hp]
+            block: block
+            intent:
+              transform: intent_summary
+      playable:
+        list: combat.hand
+        where: playable
+        item:
+          transform: card_action

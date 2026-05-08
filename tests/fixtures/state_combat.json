@@ -1,0 +1,94 @@
+{
+  "ok": true,
+  "request_id": "req_test_state",
+  "data": {
+    "state_version": 6,
+    "run_id": "seed-123",
+    "screen": "COMBAT",
+    "in_combat": true,
+    "turn": 2,
+    "available_actions": ["play_card", "end_turn"],
+    "combat": {
+      "player": {
+        "current_hp": 63,
+        "max_hp": 75,
+        "block": 4,
+        "energy": 3,
+        "stars": 1,
+        "powers": [
+          {
+            "index": 0,
+            "power_id": "Strength",
+            "name": "Strength",
+            "amount": 2,
+            "is_debuff": false
+          }
+        ]
+      },
+      "hand": [
+        {
+          "index": 0,
+          "card_id": "Strike",
+          "name": "Strike",
+          "upgraded": false,
+          "target_type": "AnyEnemy",
+          "requires_target": true,
+          "costs_x": false,
+          "star_costs_x": false,
+          "energy_cost": 1,
+          "star_cost": 0,
+          "rules_text": "Deal 6 damage.",
+          "resolved_rules_text": "Deal 8 damage.",
+          "playable": true,
+          "unplayable_reason": null
+        },
+        {
+          "index": 1,
+          "card_id": "Defend",
+          "name": "Defend",
+          "upgraded": false,
+          "target_type": "None",
+          "requires_target": false,
+          "costs_x": false,
+          "star_costs_x": false,
+          "energy_cost": 1,
+          "star_cost": 0,
+          "rules_text": "Gain 5 Block.",
+          "resolved_rules_text": "Gain 5 Block.",
+          "playable": false,
+          "unplayable_reason": "blocked_by_hook"
+        }
+      ],
+      "enemies": [
+        {
+          "index": 0,
+          "enemy_id": "cultist",
+          "name": "Cultist",
+          "current_hp": 24,
+          "max_hp": 48,
+          "block": 0,
+          "is_alive": true,
+          "is_hittable": true,
+          "powers": [],
+          "intent": "ATTACK",
+          "move_id": "PECK_MOVE",
+          "intents": [
+            {
+              "type": "attack",
+              "damage": 6,
+              "hits": 1,
+              "description": "Attack 6"
+            }
+          ]
+        }
+      ],
+      "draw_pile_count": 5,
+      "discard_pile_count": 3,
+      "exhaust_pile_count": 0
+    },
+    "run": {
+      "floor": 3,
+      "gold": 99
+    }
+  }
+}

@@ -1,0 +1,71 @@
+extends: state/common.yaml
+fields:
+  combat:
+    fields:
+      player:
+        fields:
+          hp:
+            transform: hp_pair
+            paths: [combat.player.current_hp, combat.player.max_hp]
+          block: combat.player.block
+          energy: combat.player.energy
+          stars: combat.player.stars
+          powers:
+            list: combat.player.powers
+            item:
+              fields:
+                name: name
+                power_id: power_id
+                amount: amount
+                is_debuff: is_debuff
+      incoming_damage:
+        transform: incoming_damage
+      enemies:
+        list: combat.enemies
+        item:
+          fields:
+            index: index
+            name: name
+            enemy_id: enemy_id
+            hp:
+              transform: hp_pair
+              paths: [current_hp, max_hp]
+            block: block
+            is_alive: is_alive
+            is_hittable: is_hittable
+            intent:
+              transform: intent_summary
+            powers:
+              list: powers
+              item:
+                fields:
+                  name: name
+                  power_id: power_id
+                  amount: amount
+                  is_debuff: is_debuff
+      hand:
+        list: combat.hand
+        item:
+          fields:
+            index: index
+            name: name
+            card_id: card_id
+            upgraded: upgraded
+            energy_cost: energy_cost
+            star_cost: star_cost
+            requires_target: requires_target
+            target_type: target_type
+            playable: playable
+            unplayable_reason: unplayable_reason
+            text:
+              transform: card_text
+      playable_cards:
+        list: combat.hand
+        where: playable
+        item:
+          transform: card_action
+      piles:
+        fields:
+          draw: combat.draw_pile_count
+          discard: combat.discard_pile_count
+          exhaust: combat.exhaust_pile_count

@@ -1,0 +1,840 @@
+{
+  "data": {
+    "action": "end_turn",
+    "message": "Action completed.",
+    "stable": true,
+    "state": {
+      "agent_view": {
+        "actions": [],
+        "available_actions": [],
+        "bundles": null,
+        "character_select": null,
+        "chest": null,
+        "combat": {
+          "discard": [
+            {
+              "keywords": [],
+              "line": "打击*4 [1费]：造成6点伤害。",
+              "mods": []
+            },
+            {
+              "keywords": [
+                "格挡"
+              ],
+              "line": "防御*3 [1费]：获得5点格挡。",
+              "mods": []
+            }
+          ],
+          "discard_cards": [
+            {
+              "card_id": "STRIKE_SILENT",
+              "card_type": "Attack",
+              "upgraded": false
+            },
+            {
+              "card_id": "DEFEND_SILENT",
+              "card_type": "Skill",
+              "upgraded": false
+            },
+            {
+              "card_id": "DEFEND_SILENT",
+              "card_type": "Skill",
+              "upgraded": false
+            },
+            {
+              "card_id": "STRIKE_SILENT",
+              "card_type": "Attack",
+              "upgraded": false
+            },
+            {
+              "card_id": "STRIKE_SILENT",
+              "card_type": "Attack",
+              "upgraded": false
+            },
+            {
+              "card_id": "STRIKE_SILENT",
+              "card_type": "Attack",
+              "upgraded": false
+            },
+            {
+              "card_id": "DEFEND_SILENT",
+              "card_type": "Skill",
+              "upgraded": false
+            }
+          ],
+          "draw": [
+            {
+              "keywords": [
+                "虚弱"
+              ],
+              "line": "中和 [0费]：造成3点伤害。 给予1层虚弱。",
+              "mods": []
+            },
+            {
+              "keywords": [],
+              "line": "打击 [1费]：造成6点伤害。",
+              "mods": []
+            },
+            {
+              "keywords": [
+                "格挡"
+              ],
+              "line": "生存者 [1费]：获得8点格挡。 丢弃1张牌。",
+              "mods": []
+            },
+            {
+              "keywords": [
+                "格挡"
+              ],
+              "line": "防御*2 [1费]：获得5点格挡。",
+              "mods": []
+            }
+          ],
+          "draw_cards": [
+            {
+              "card_id": "SURVIVOR",
+              "card_type": "Skill",
+              "upgraded": false
+            },
+            {
+              "card_id": "DEFEND_SILENT",
+              "card_type": "Skill",
+              "upgraded": false
+            },
+            {
+              "card_id": "NEUTRALIZE",
+              "card_type": "Attack",
+              "upgraded": false
+            },
+            {
+              "card_id": "STRIKE_SILENT",
+              "card_type": "Attack",
+              "upgraded": false
+            },
+            {
+              "card_id": "DEFEND_SILENT",
+              "card_type": "Skill",
+              "upgraded": false
+            }
+          ],
+          "enemies": [
+            {
+              "alive": true,
+              "block": 0,
+              "enemy_id": "NIBBIT",
+              "hittable": true,
+              "hp": "39/45",
+              "i": 0,
+              "intent": "BUTT_MOVE",
+              "move_id": "BUTT_MOVE",
+              "name": "小啃兽"
+            }
+          ],
+          "exhaust": [],
+          "exhaust_cards": [],
+          "hand": [],
+          "player": {
+            "attacks_played_this_turn": 1,
+            "block": 10,
+            "cards_played_this_turn": 3,
+            "energy": 0,
+            "focus": 0,
+            "hp": "70/70",
+            "orbs": [],
+            "skills_played_this_turn": 2,
+            "stars": 0
+          }
+        },
+        "event": null,
+        "game_over": null,
+        "glossary": {
+          "格挡": "格挡会优先抵消即将受到的伤害。",
+          "虚弱": "虚弱单位造成的攻击伤害会降低。"
+        },
+        "map": null,
+        "modal": null,
+        "rest": null,
+        "reward": null,
+        "run": {
+          "act_id": "0",
+          "ascension": 0,
+          "ascension_effects": [],
+          "base_orb_slots": 0,
+          "boss_id": null,
+          "character": "静默猎手",
+          "deck": [
+            {
+              "keywords": [
+                "虚弱"
+              ],
+              "line": "中和 [0费]：造成3点伤害。 给予1层虚弱。",
+              "mods": []
+            },
+            {
+              "keywords": [],
+              "line": "打击*5 [1费]：造成6点伤害。",
+              "mods": []
+            },
+            {
+              "keywords": [
+                "格挡"
+              ],
+              "line": "生存者 [1费]：获得8点格挡。 丢弃1张牌。",
+              "mods": []
+            },
+            {
+              "keywords": [
+                "格挡"
+              ],
+              "line": "防御*5 [1费]：获得5点格挡。",
+              "mods": []
+            }
+          ],
+          "floor": 2,
+          "gold": 99,
+          "hp": "70/70",
+          "max_energy": 3,
+          "piles": {
+            "discard": [
+              {
+                "keywords": [],
+                "line": "打击*4 [1费]：造成6点伤害。",
+                "mods": []
+              },
+              {
+                "keywords": [
+                  "格挡"
+                ],
+                "line": "防御*3 [1费]：获得5点格挡。",
+                "mods": []
+              }
+            ],
+            "discard_cards": [
+              {
+                "card_id": "STRIKE_SILENT",
+                "card_type": "Attack",
+                "upgraded": false
+              },
+              {
+                "card_id": "DEFEND_SILENT",
+                "card_type": "Skill",
+                "upgraded": false
+              },
+              {
+                "card_id": "DEFEND_SILENT",
+                "card_type": "Skill",
+                "upgraded": false
+              },
+              {
+                "card_id": "STRIKE_SILENT",
+                "card_type": "Attack",
+                "upgraded": false
+              },
+              {
+                "card_id": "STRIKE_SILENT",
+                "card_type": "Attack",
+                "upgraded": false
+              },
+              {
+                "card_id": "STRIKE_SILENT",
+                "card_type": "Attack",
+                "upgraded": false
+              },
+              {
+                "card_id": "DEFEND_SILENT",
+                "card_type": "Skill",
+                "upgraded": false
+              }
+            ],
+            "draw": [
+              {
+                "keywords": [
+                  "虚弱"
+                ],
+                "line": "中和 [0费]：造成3点伤害。 给予1层虚弱。",
+                "mods": []
+              },
+              {
+                "keywords": [],
+                "line": "打击 [1费]：造成6点伤害。",
+                "mods": []
+              },
+              {
+                "keywords": [
+                  "格挡"
+                ],
+                "line": "生存者 [1费]：获得8点格挡。 丢弃1张牌。",
+                "mods": []
+              },
+              {
+                "keywords": [
+                  "格挡"
+                ],
+                "line": "防御*2 [1费]：获得5点格挡。",
+                "mods": []
+              }
+            ],
+            "draw_cards": [
+              {
+                "card_id": "SURVIVOR",
+                "card_type": "Skill",
+                "upgraded": false
+              },
+              {
+                "card_id": "DEFEND_SILENT",
+                "card_type": "Skill",
+                "upgraded": false
+              },
+              {
+                "card_id": "NEUTRALIZE",
+                "card_type": "Attack",
+                "upgraded": false
+              },
+              {
+                "card_id": "STRIKE_SILENT",
+                "card_type": "Attack",
+                "upgraded": false
+              },
+              {
+                "card_id": "DEFEND_SILENT",
+                "card_type": "Skill",
+                "upgraded": false
+              }
+            ],
+            "exhaust": [],
+            "exhaust_cards": []
+          },
+          "potions": [
+            {
+              "discard": false,
+              "i": 0,
+              "line": "0: 空",
+              "potion_id": null,
+              "target": null,
+              "targets": [],
+              "usable": false
+            },
+            {
+              "discard": false,
+              "i": 1,
+              "line": "1: 空",
+              "potion_id": null,
+              "target": null,
+              "targets": [],
+              "usable": false
+            },
+            {
+              "discard": false,
+              "i": 2,
+              "line": "2: 空",
+              "potion_id": null,
+              "target": null,
+              "targets": [],
+              "usable": false
+            }
+          ],
+          "relics": [
+            "蛇之戒指",
+            "轰鸣海螺"
+          ]
+        },
+        "run_id": "YDBWP7KR26",
+        "screen": "COMBAT",
+        "selection": null,
+        "session": {
+          "control_scope": "local_player",
+          "mode": "singleplayer",
+          "phase": "run"
+        },
+        "shop": null,
+        "timeline": null,
+        "turn": 1,
+        "version": 3
+      },
+      "available_actions": [],
+      "bundles": null,
+      "character_select": null,
+      "chest": null,
+      "combat": {
+        "enemies": [
+          {
+            "block": 0,
+            "current_hp": 39,
+            "enemy_id": "NIBBIT",
+            "index": 0,
+            "intent": "BUTT_MOVE",
+            "intents": [
+              {
+                "damage": 12,
+                "hits": 1,
+                "index": 0,
+                "intent_type": "Attack",
+                "label": "12",
+                "status_card_count": null,
+                "total_damage": 12
+              }
+            ],
+            "is_alive": true,
+            "is_hittable": true,
+            "max_hp": 45,
+            "move_id": "BUTT_MOVE",
+            "name": "小啃兽",
+            "powers": []
+          }
+        ],
+        "hand": [],
+        "player": {
+          "attacks_played_this_turn": 1,
+          "base_orb_slots": 0,
+          "block": 10,
+          "cards_played_this_turn": 3,
+          "current_hp": 70,
+          "empty_orb_slots": 0,
+          "energy": 0,
+          "focus": 0,
+          "max_hp": 70,
+          "orb_capacity": 0,
+          "orbs": [],
+          "powers": [],
+          "skills_played_this_turn": 2,
+          "stars": 0
+        },
+        "players": [
+          {
+            "block": 10,
+            "character_id": "SILENT",
+            "character_name": "静默猎手",
+            "current_hp": 70,
+            "energy": 0,
+            "focus": 0,
+            "is_alive": true,
+            "is_connected": true,
+            "is_local": true,
+            "max_hp": 70,
+            "player_id": "1",
+            "slot_index": 0,
+            "stars": 0
+          }
+        ]
+      },
+      "event": null,
+      "game_over": null,
+      "in_combat": true,
+      "map": null,
+      "modal": null,
+      "multiplayer": null,
+      "multiplayer_lobby": null,
+      "rest": null,
+      "reward": null,
+      "run": {
+        "act_id": "0",
+        "ascension": 0,
+        "ascension_effects": [],
+        "base_orb_slots": 0,
+        "boss_id": null,
+        "character_id": "SILENT",
+        "character_name": "静默猎手",
+        "current_hp": 70,
+        "deck": [
+          {
+            "card_id": "STRIKE_SILENT",
+            "card_type": "Attack",
+            "costs_x": false,
+            "dynamic_values": [
+              {
+                "base_value": 6,
+                "current_value": 6,
+                "enchanted_value": 6,
+                "is_modified": false,
+                "name": "Damage",
+                "was_just_upgraded": false
+              }
+            ],
+            "energy_cost": 1,
+            "index": 0,
+            "name": "打击",
+            "rarity": "Basic",
+            "resolved_rules_text": "造成6点伤害。",
+            "rules_text": "造成{Damage:diff()}点伤害。",
+            "star_cost": 0,
+            "star_costs_x": false,
+            "upgraded": false
+          },
+          {
+            "card_id": "STRIKE_SILENT",
+            "card_type": "Attack",
+            "costs_x": false,
+            "dynamic_values": [
+              {
+                "base_value": 6,
+                "current_value": 6,
+                "enchanted_value": 6,
+                "is_modified": false,
+                "name": "Damage",
+                "was_just_upgraded": false
+              }
+            ],
+            "energy_cost": 1,
+            "index": 1,
+            "name": "打击",
+            "rarity": "Basic",
+            "resolved_rules_text": "造成6点伤害。",
+            "rules_text": "造成{Damage:diff()}点伤害。",
+            "star_cost": 0,
+            "star_costs_x": false,
+            "upgraded": false
+          },
+          {
+            "card_id": "STRIKE_SILENT",
+            "card_type": "Attack",
+            "costs_x": false,
+            "dynamic_values": [
+              {
+                "base_value": 6,
+                "current_value": 6,
+                "enchanted_value": 6,
+                "is_modified": false,
+                "name": "Damage",
+                "was_just_upgraded": false
+              }
+            ],
+            "energy_cost": 1,
+            "index": 2,
+            "name": "打击",
+            "rarity": "Basic",
+            "resolved_rules_text": "造成6点伤害。",
+            "rules_text": "造成{Damage:diff()}点伤害。",
+            "star_cost": 0,
+            "star_costs_x": false,
+            "upgraded": false
+          },
+          {
+            "card_id": "STRIKE_SILENT",
+            "card_type": "Attack",
+            "costs_x": false,
+            "dynamic_values": [
+              {
+                "base_value": 6,
+                "current_value": 6,
+                "enchanted_value": 6,
+                "is_modified": false,
+                "name": "Damage",
+                "was_just_upgraded": false
+              }
+            ],
+            "energy_cost": 1,
+            "index": 3,
+            "name": "打击",
+            "rarity": "Basic",
+            "resolved_rules_text": "造成6点伤害。",
+            "rules_text": "造成{Damage:diff()}点伤害。",
+            "star_cost": 0,
+            "star_costs_x": false,
+            "upgraded": false
+          },
+          {
+            "card_id": "STRIKE_SILENT",
+            "card_type": "Attack",
+            "costs_x": false,
+            "dynamic_values": [
+              {
+                "base_value": 6,
+                "current_value": 6,
+                "enchanted_value": 6,
+                "is_modified": false,
+                "name": "Damage",
+                "was_just_upgraded": false
+              }
+            ],
+            "energy_cost": 1,
+            "index": 4,
+            "name": "打击",
+            "rarity": "Basic",
+            "resolved_rules_text": "造成6点伤害。",
+            "rules_text": "造成{Damage:diff()}点伤害。",
+            "star_cost": 0,
+            "star_costs_x": false,
+            "upgraded": false
+          },
+          {
+            "card_id": "DEFEND_SILENT",
+            "card_type": "Skill",
+            "costs_x": false,
+            "dynamic_values": [
+              {
+                "base_value": 5,
+                "current_value": 5,
+                "enchanted_value": 5,
+                "is_modified": false,
+                "name": "Block",
+                "was_just_upgraded": false
+              }
+            ],
+            "energy_cost": 1,
+            "index": 5,
+            "name": "防御",
+            "rarity": "Basic",
+            "resolved_rules_text": "获得5点格挡。",
+            "rules_text": "获得{Block:diff()}点格挡。",
+            "star_cost": 0,
+            "star_costs_x": false,
+            "upgraded": false
+          },
+          {
+            "card_id": "DEFEND_SILENT",
+            "card_type": "Skill",
+            "costs_x": false,
+            "dynamic_values": [
+              {
+                "base_value": 5,
+                "current_value": 5,
+                "enchanted_value": 5,
+                "is_modified": false,
+                "name": "Block",
+                "was_just_upgraded": false
+              }
+            ],
+            "energy_cost": 1,
+            "index": 6,
+            "name": "防御",
+            "rarity": "Basic",
+            "resolved_rules_text": "获得5点格挡。",
+            "rules_text": "获得{Block:diff()}点格挡。",
+            "star_cost": 0,
+            "star_costs_x": false,
+            "upgraded": false
+          },
+          {
+            "card_id": "DEFEND_SILENT",
+            "card_type": "Skill",
+            "costs_x": false,
+            "dynamic_values": [
+              {
+                "base_value": 5,
+                "current_value": 5,
+                "enchanted_value": 5,
+                "is_modified": false,
+                "name": "Block",
+                "was_just_upgraded": false
+              }
+            ],
+            "energy_cost": 1,
+            "index": 7,
+            "name": "防御",
+            "rarity": "Basic",
+            "resolved_rules_text": "获得5点格挡。",
+            "rules_text": "获得{Block:diff()}点格挡。",
+            "star_cost": 0,
+            "star_costs_x": false,
+            "upgraded": false
+          },
+          {
+            "card_id": "DEFEND_SILENT",
+            "card_type": "Skill",
+            "costs_x": false,
+            "dynamic_values": [
+              {
+                "base_value": 5,
+                "current_value": 5,
+                "enchanted_value": 5,
+                "is_modified": false,
+                "name": "Block",
+                "was_just_upgraded": false
+              }
+            ],
+            "energy_cost": 1,
+            "index": 8,
+            "name": "防御",
+            "rarity": "Basic",
+            "resolved_rules_text": "获得5点格挡。",
+            "rules_text": "获得{Block:diff()}点格挡。",
+            "star_cost": 0,
+            "star_costs_x": false,
+            "upgraded": false
+          },
+          {
+            "card_id": "DEFEND_SILENT",
+            "card_type": "Skill",
+            "costs_x": false,
+            "dynamic_values": [
+              {
+                "base_value": 5,
+                "current_value": 5,
+                "enchanted_value": 5,
+                "is_modified": false,
+                "name": "Block",
+                "was_just_upgraded": false
+              }
+            ],
+            "energy_cost": 1,
+            "index": 9,
+            "name": "防御",
+            "rarity": "Basic",
+            "resolved_rules_text": "获得5点格挡。",
+            "rules_text": "获得{Block:diff()}点格挡。",
+            "star_cost": 0,
+            "star_costs_x": false,
+            "upgraded": false
+          },
+          {
+            "card_id": "NEUTRALIZE",
+            "card_type": "Attack",
+            "costs_x": false,
+            "dynamic_values": [
+              {
+                "base_value": 3,
+                "current_value": 3,
+                "enchanted_value": 3,
+                "is_modified": false,
+                "name": "Damage",
+                "was_just_upgraded": false
+              },
+              {
+                "base_value": 1,
+                "current_value": 1,
+                "enchanted_value": 1,
+                "is_modified": false,
+                "name": "WeakPower",
+                "was_just_upgraded": false
+              }
+            ],
+            "energy_cost": 0,
+            "index": 10,
+            "name": "中和",
+            "rarity": "Basic",
+            "resolved_rules_text": "造成3点伤害。 给予1层虚弱。",
+            "rules_text": "造成{Damage:diff()}点伤害。 给予{WeakPower:diff()}层虚弱。",
+            "star_cost": 0,
+            "star_costs_x": false,
+            "upgraded": false
+          },
+          {
+            "card_id": "SURVIVOR",
+            "card_type": "Skill",
+            "costs_x": false,
+            "dynamic_values": [
+              {
+                "base_value": 8,
+                "current_value": 8,
+                "enchanted_value": 8,
+                "is_modified": false,
+                "name": "Block",
+                "was_just_upgraded": false
+              }
+            ],
+            "energy_cost": 1,
+            "index": 11,
+            "name": "生存者",
+            "rarity": "Basic",
+            "resolved_rules_text": "获得8点格挡。 丢弃1张牌。",
+            "rules_text": "获得{Block:diff()}点格挡。 丢弃1张牌。",
+            "star_cost": 0,
+            "star_costs_x": false,
+            "upgraded": false
+          }
+        ],
+        "floor": 2,
+        "gold": 99,
+        "max_energy": 3,
+        "max_hp": 70,
+        "players": [
+          {
+            "character_id": "SILENT",
+            "character_name": "静默猎手",
+            "current_hp": 70,
+            "gold": 99,
+            "is_alive": true,
+            "is_connected": true,
+            "is_local": true,
+            "max_hp": 70,
+            "player_id": "1",
+            "slot_index": 0
+          }
+        ],
+        "potions": [
+          {
+            "can_discard": false,
+            "can_use": false,
+            "description": null,
+            "index": 0,
+            "is_queued": false,
+            "name": null,
+            "occupied": false,
+            "potion_id": null,
+            "rarity": null,
+            "requires_target": false,
+            "target_index_space": null,
+            "target_type": null,
+            "usage": null,
+            "valid_target_indices": []
+          },
+          {
+            "can_discard": false,
+            "can_use": false,
+            "description": null,
+            "index": 1,
+            "is_queued": false,
+            "name": null,
+            "occupied": false,
+            "potion_id": null,
+            "rarity": null,
+            "requires_target": false,
+            "target_index_space": null,
+            "target_type": null,
+            "usage": null,
+            "valid_target_indices": []
+          },
+          {
+            "can_discard": false,
+            "can_use": false,
+            "description": null,
+            "index": 2,
+            "is_queued": false,
+            "name": null,
+            "occupied": false,
+            "potion_id": null,
+            "rarity": null,
+            "requires_target": false,
+            "target_index_space": null,
+            "target_type": null,
+            "usage": null,
+            "valid_target_indices": []
+          }
+        ],
+        "relics": [
+          {
+            "description": "在每场战斗开始时，额外抽[blue]2[/blue]张牌。",
+            "index": 0,
+            "is_melted": false,
+            "name": "蛇之戒指",
+            "relic_id": "RING_OF_THE_SNAKE",
+            "stack": null
+          },
+          {
+            "description": "在[gold]精英[/gold]战的战斗开始时，额外抽[blue]2[/blue]张牌。",
+            "index": 1,
+            "is_melted": false,
+            "name": "轰鸣海螺",
+            "relic_id": "BOOMING_CONCH",
+            "stack": null
+          }
+        ]
+      },
+      "run_id": "YDBWP7KR26",
+      "screen": "COMBAT",
+      "selection": null,
+      "session": {
+        "control_scope": "local_player",
+        "mode": "singleplayer",
+        "phase": "run"
+      },
+      "shop": null,
+      "state_version": 9,
+      "timeline": null,
+      "turn": 1
+    },
+    "status": "completed"
+  },
+  "ok": true,
+  "request_id": "req_20260508_144609_2663_519"
+}

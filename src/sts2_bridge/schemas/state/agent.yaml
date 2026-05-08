@@ -1,0 +1,13 @@
+extends: state/combat.yaml
+fields:
+  run: run
+  map: map
+  reward: reward
+  selection: selection
+  chest: chest
+  event: event
+  shop: shop
+  rest: rest
+  character_select: character_select
+  modal: modal
+  game_over: game_over
