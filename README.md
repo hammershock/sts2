@@ -25,13 +25,11 @@ python -m pip install -e ".[dev]"
 ## CLI
 
 ```bash
-sts2 health
 sts2 state
 sts2 state --layer filtered --pretty
 sts2 state --layer raw --pretty
 sts2 state --view decision --layer filtered --pretty
 sts2 actions --pretty
-sts2 combat --pretty
 sts2 act play_card 0
 sts2 act play_card 0 0
 sts2 act playcard --card_index 0
@@ -39,8 +37,9 @@ sts2 act 1 --card_index 0
 sts2 act play_card --card_index 0 --target_index 0
 sts2 wait --timeout 30 --pretty
 sts2 state --with-window --pretty
-sts2 window-status --pretty
-sts2 windows --pretty
+sts2 debug health --pretty
+sts2 debug window-status --pretty
+sts2 debug windows --pretty
 sts2 screenshot --pretty
 sts2 screenshot --activate-fallback --pretty
 ```
@@ -63,7 +62,7 @@ Filtering rules live in YAML files under `src/sts2_bridge/schemas/`, split by `s
 
 ## Screenshot Fallback
 
-`sts2 state --with-window` and `sts2 window-status` report whether the game process/window exists and whether Slay the Spire 2 is currently the frontmost app.
+`sts2 state --with-window` and `sts2 debug window-status` report whether the game process/window exists and whether Slay the Spire 2 is currently the frontmost app.
 
 `sts2 screenshot` is a macOS-only debug fallback for visual inspection. When the game is frontmost, it uses ScreenCaptureKit single-window capture. When the game is not frontmost, it will not use rectangle capture by default because that would capture whatever is covering the game. macOS must grant Screen Recording permission to the terminal app that runs the command.
 

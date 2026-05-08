@@ -21,7 +21,7 @@ def test_cli_health_outputs_json() -> None:
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "ready"}})
     )
 
-    result = runner.invoke(app, ["health", "--base-url", BASE_URL])
+    result = runner.invoke(app, ["debug", "health", "--base-url", BASE_URL])
 
     assert result.exit_code == 0
     assert json.loads(result.stdout) == {"ok": True, "data": {"status": "ready"}}
@@ -228,3 +228,19 @@ def test_cli_policy_commands_are_not_registered() -> None:
 
     assert suggest_result.exit_code == 2
     assert step_result.exit_code == 2
+
+
+def test_cli_help_groups_debug_commands_and_removes_combat() -> None:
+    top_result = runner.invoke(app, ["--help"])
+    debug_result = runner.invoke(app, ["debug", "--help"])
+
+    assert top_result.exit_code == 0
+    assert debug_result.exit_code == 0
+    assert "debug" in top_result.stdout
+    assert "combat" not in top_result.stdout
+    assert "health" not in top_result.stdout
+    assert "windows" not in top_result.stdout
+    assert "window-status" not in top_result.stdout
+    assert "health" in debug_result.stdout
+    assert "windows" in debug_result.stdout
+    assert "window-status" in debug_result.stdout

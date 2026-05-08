@@ -75,14 +75,13 @@ When an invalid arg name is used, the mod often returns a useful message such as
 Use compact views by default:
 
 ```bash
-sts2 health --pretty
 sts2 state
 sts2 state --layer filtered --pretty
 sts2 state --layer raw --pretty
 sts2 state --view decision --layer filtered --pretty
 sts2 actions --pretty
-sts2 combat --pretty
 sts2 wait --timeout 15 --pretty
+sts2 debug health --pretty
 ```
 
 Execute actions:
@@ -102,7 +101,8 @@ Window and screenshot debugging:
 
 ```bash
 sts2 state --with-window --pretty
-sts2 window-status --pretty
+sts2 debug window-status --pretty
+sts2 debug windows --pretty
 sts2 screenshot --pretty
 sts2 screenshot --activate-fallback --pretty
 ```

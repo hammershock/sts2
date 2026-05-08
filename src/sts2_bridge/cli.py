@@ -15,7 +15,6 @@ from sts2_bridge.agent_view import (
     build_action_result_view,
     build_actions_view,
     build_agent_view,
-    build_combat_view,
     build_state_view,
 )
 from sts2_bridge.client import DEFAULT_BASE_URL, Sts2Client
@@ -23,6 +22,8 @@ from sts2_bridge.models import BridgeError, GameState
 from sts2_bridge.rendering import render_state_view
 
 app = typer.Typer(no_args_is_help=True, help="Layered CLI bridge for Slay the Spire 2 agent control.")
+debug_app = typer.Typer(no_args_is_help=True, help="Debug commands for API and macOS window inspection.")
+app.add_typer(debug_app, name="debug")
 
 
 BaseUrlOption = Annotated[
@@ -35,7 +36,7 @@ StateLayerOption = Annotated[str, typer.Option("--layer", help="State layer: vie
 FormatOption = Annotated[str, typer.Option("--format", help="Output format: text, json.")]
 
 
-@app.command()
+@debug_app.command()
 def health(
     base_url: BaseUrlOption = None,
     api_timeout: TimeoutOption = 10.0,
@@ -96,22 +97,6 @@ def actions(
     """List actions available in the current state."""
     client = _client(base_url, api_timeout)
     _run_json(lambda: {"ok": True, "data": build_actions_view(client.state())}, pretty)
-
-
-@app.command()
-def combat(
-    base_url: BaseUrlOption = None,
-    api_timeout: TimeoutOption = 10.0,
-    pretty: PrettyOption = False,
-) -> None:
-    """Return a combat-focused summary of the current state."""
-    client = _client(base_url, api_timeout)
-
-    def command() -> dict[str, Any]:
-        game_state = client.state()
-        return {"ok": True, "data": build_combat_view(game_state)}
-
-    _run_json(command, pretty)
 
 
 @app.command(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
@@ -200,7 +185,7 @@ def wait(
     _run_json(command, pretty)
 
 
-@app.command()
+@debug_app.command()
 def windows(
     owner: Annotated[str, typer.Option("--owner", help="macOS window owner name to search for.")] = "Slay the Spire 2",
     pretty: PrettyOption = False,
@@ -228,7 +213,7 @@ def windows(
     _run_json(command, pretty)
 
 
-@app.command("window-status")
+@debug_app.command("window-status")
 def window_status_command(
     owner: Annotated[str, typer.Option("--owner", help="macOS window owner name to search for.")] = "Slay the Spire 2",
     pretty: PrettyOption = False,
