@@ -4,7 +4,7 @@ This file is the compact starting context for future agents working on this repo
 
 ## Current Purpose
 
-`sts2-bridge` is a local CLI bridge for Slay the Spire 2 agents. It talks to the STS2-Agent mod HTTP server and exposes filtered game state, filtered action results, window status, and macOS screenshot fallback.
+`sts2-bridge` is a local CLI bridge for Slay the Spire 2 agents. It talks to the STS2-Agent mod HTTP server and exposes three state layers: raw HTTP-derived data, schema-filtered data, and human-readable Agent views.
 
 The bridge is basically usable and now has the first harness layer: YAML schema-driven filtering for state/action HTTP payloads. Policy, planner, and benchmark work are intentionally deferred until the filter layer is stable.
 
@@ -72,9 +72,10 @@ Use compact views by default:
 
 ```bash
 sts2 health --pretty
-sts2 state --pretty
-sts2 state --view decision --pretty
-sts2 state --view agent --pretty
+sts2 state
+sts2 state --layer filtered --pretty
+sts2 state --layer raw --pretty
+sts2 state --view decision --layer filtered --pretty
 sts2 actions --pretty
 sts2 combat --pretty
 sts2 wait --timeout 15 --pretty
@@ -116,7 +117,7 @@ As of the last manual play session:
 sts2 act choose_map_node --arg option_index=0 --pretty
 ```
 
-Re-read `sts2 state --pretty` before acting, because the user may have played manually.
+Re-read `sts2 state` before acting, because the user may have played manually.
 
 ## Lessons From Manual Play
 
@@ -133,18 +134,23 @@ Re-read `sts2 state --pretty` before acting, because the user may have played ma
 
 ## Implemented Filter Layer
 
-1. Schema-driven state views:
+1. Three state layers:
+   - `raw`: full parsed HTTP state, exposed by `sts2 state --layer raw` or `--raw`.
+   - `filtered`: YAML schema-filtered JSON, exposed by `sts2 state --layer filtered`.
+   - `view`: default human-readable text, exposed by `sts2 state`.
+
+2. Schema-driven state filtering:
    - YAML schemas live under `src/sts2_bridge/schemas/state/`.
-   - `sts2 state` defaults to a filtered screen-aware view.
+   - The default COMBAT view is concise text built from filtered schema output.
    - `--view decision`, `--view combat`, and `--view agent` expose progressively richer filtered views.
    - `--raw` remains opt-in for parser/debug work.
 
-2. Filtered action results:
+3. Filtered action results:
    - YAML schemas live under `src/sts2_bridge/schemas/action/`.
    - Default `sts2 act` returns `status`, action args, compact post-action state, and before/after deltas.
    - `--raw-result` preserves the old full action-result inspection mode.
 
-3. Real HTTP samples:
+4. Real HTTP samples:
    - Raw envelopes live under `samples/http/health`, `samples/http/state`, and `samples/http/action`.
    - Current samples cover health, Neow event, map, choose map node, combat states, play card, and end turn.
    - These samples are regression inputs for filtering behavior.

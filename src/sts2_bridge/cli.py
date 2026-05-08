@@ -19,8 +19,9 @@ from sts2_bridge.agent_view import (
 )
 from sts2_bridge.client import DEFAULT_BASE_URL, Sts2Client
 from sts2_bridge.models import BridgeError, GameState
+from sts2_bridge.rendering import render_state_view
 
-app = typer.Typer(no_args_is_help=True, help="JSON-first CLI bridge for Slay the Spire 2 agent control.")
+app = typer.Typer(no_args_is_help=True, help="Layered CLI bridge for Slay the Spire 2 agent control.")
 
 
 BaseUrlOption = Annotated[
@@ -29,6 +30,8 @@ BaseUrlOption = Annotated[
 ]
 TimeoutOption = Annotated[float, typer.Option("--api-timeout", help="HTTP request timeout in seconds.")]
 PrettyOption = Annotated[bool, typer.Option("--pretty", help="Pretty-print JSON output.")]
+StateLayerOption = Annotated[str, typer.Option("--layer", help="State layer: view, filtered, raw.")]
+FormatOption = Annotated[str, typer.Option("--format", help="Output format: text, json.")]
 
 
 @app.command()
@@ -50,8 +53,10 @@ def state(
     agent_view: Annotated[bool, typer.Option("--agent-view", help="Return a compact agent-oriented state view.")] = False,
     view: Annotated[
         str,
-        typer.Option("--view", help="State view: brief, decision, combat, agent, raw."),
+        typer.Option("--view", help="Filtered schema view: brief, decision, combat, agent."),
     ] = "brief",
+    layer: StateLayerOption = "view",
+    output_format: FormatOption = "text",
     with_window: Annotated[
         bool,
         typer.Option("--with-window", help="Include macOS STS2 window/frontmost status when available."),
@@ -61,15 +66,24 @@ def state(
     """Read the current game state."""
     client = _client(base_url, api_timeout)
 
-    def command() -> dict[str, Any]:
+    def command() -> dict[str, Any] | str:
         game_state = client.state()
+        selected_layer = _select_state_layer(raw=raw, agent_view=agent_view, layer=layer)
         selected_view = _select_state_view(raw=raw, agent_view=agent_view, view=view)
-        data = _dump_model(game_state) if selected_view == "raw" else build_state_view(game_state, selected_view)
+
+        if selected_layer == "raw":
+            data = _dump_model(game_state)
+        else:
+            data = build_state_view(game_state, selected_view)
         if with_window:
             data["window"] = _macos_window_status_or_error()
+
+        selected_format = _select_output_format(output_format, selected_layer)
+        if selected_format == "text":
+            return render_state_view(data)
         return {"ok": True, "data": data}
 
-    _run_json(command, pretty)
+    _run_output(command, pretty)
 
 
 @app.command()
@@ -281,6 +295,18 @@ def _run_json(command: Any, pretty: bool) -> None:
         raise typer.Exit(code=1) from exc
 
 
+def _run_output(command: Any, pretty: bool) -> None:
+    try:
+        payload = command()
+        if isinstance(payload, str):
+            typer.echo(payload, nl=False)
+        else:
+            _emit(payload, pretty)
+    except BridgeError as exc:
+        _emit(exc.to_dict(), pretty)
+        raise typer.Exit(code=1) from exc
+
+
 def _emit(payload: dict[str, Any], pretty: bool) -> None:
     typer.echo(json.dumps(payload, ensure_ascii=False, indent=2 if pretty else None, sort_keys=pretty))
 
@@ -327,14 +353,44 @@ def _select_state_view(*, raw: bool, agent_view: bool, view: str) -> str:
         return "raw"
     if agent_view:
         return "agent"
-    if view not in {"brief", "decision", "combat", "agent", "raw"}:
+    if view not in {"brief", "decision", "combat", "agent"}:
         raise BridgeError(
             "invalid_cli_arg",
-            "--view must be one of: brief, decision, combat, agent, raw.",
+            "--view must be one of: brief, decision, combat, agent.",
             details={"view": view},
             retryable=False,
         )
     return view
+
+
+def _select_state_layer(*, raw: bool, agent_view: bool, layer: str) -> str:
+    if raw:
+        return "raw"
+    if agent_view:
+        return "filtered"
+    if layer not in {"view", "filtered", "raw"}:
+        raise BridgeError(
+            "invalid_cli_arg",
+            "--layer must be one of: view, filtered, raw.",
+            details={"layer": layer},
+            retryable=False,
+        )
+    return layer
+
+
+def _select_output_format(output_format: str, layer: str) -> str:
+    if output_format not in {"text", "json"}:
+        raise BridgeError(
+            "invalid_cli_arg",
+            "--format must be one of: text, json.",
+            details={"format": output_format},
+            retryable=False,
+        )
+    if output_format == "text" and layer == "raw":
+        return "json"
+    if output_format == "text" and layer == "filtered":
+        return "json"
+    return output_format
 
 
 def _try_state(client: Sts2Client) -> GameState | None:

@@ -28,6 +28,30 @@ def test_cli_health_outputs_json() -> None:
 
 
 @respx.mock
+def test_cli_state_defaults_to_text_view() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_combat")))
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("COMBAT turn=2")
+    assert "Player: HP 63/75" in result.stdout
+    assert "[0] Strike | cost 1 | playable | damage 8 | target enemy[0]" in result.stdout
+
+
+@respx.mock
+def test_cli_state_filtered_layer_outputs_json() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_combat")))
+
+    result = runner.invoke(app, ["state", "--layer", "filtered", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["data"]["screen"] == "COMBAT"
+    assert payload["data"]["combat"]["playable"][0]["card_name"] == "Strike"
+
+
+@respx.mock
 def test_cli_act_parses_repeated_args() -> None:
     route = respx.post(f"{BASE_URL}/action").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})

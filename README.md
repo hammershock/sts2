@@ -1,6 +1,6 @@
 # STS2 Bridge
 
-`sts2-bridge` is a JSON-first CLI bridge for agents that play Slay the Spire 2 through a localhost Mod API.
+`sts2-bridge` is a layered CLI bridge for agents that play Slay the Spire 2 through a localhost Mod API.
 
 The first backend targets the STS2-Agent style HTTP API:
 
@@ -26,9 +26,10 @@ python -m pip install -e ".[dev]"
 
 ```bash
 sts2 health
-sts2 state --pretty
-sts2 state --view decision --pretty
-sts2 state --view agent --pretty
+sts2 state
+sts2 state --layer filtered --pretty
+sts2 state --layer raw --pretty
+sts2 state --view decision --layer filtered --pretty
 sts2 actions --pretty
 sts2 combat --pretty
 sts2 act play_card --arg card_index=0 --arg target_index=1 --pretty
@@ -41,9 +42,13 @@ sts2 screenshot --pretty
 sts2 screenshot --activate-fallback --pretty
 ```
 
-All commands emit JSON by default so that agents can parse them reliably.
+State output has three layers:
 
-`sts2 state` defaults to a schema-filtered view, which is intended to keep token use low. Use `--view decision` when an agent needs the compact decision packet, `--view combat` for tactical combat state, `--view agent` for the older broad compact view, and `--raw` only when debugging parser coverage.
+- `view`: default human-readable text for Agent input.
+- `filtered`: YAML schema-filtered JSON for debugging and downstream tooling.
+- `raw`: full parsed HTTP state for parser/debug work.
+
+`sts2 state` defaults to the text `view` layer. Use `--layer filtered` for schema-filtered JSON and `--layer raw` or `--raw` for the full parsed payload. Use `--view decision`, `--view combat`, or `--view agent` to select richer filtered state before rendering or JSON output. Use `--format json` if a caller wants the selected view layer wrapped as JSON.
 
 `sts2 act` defaults to a filtered action result: status, action args, a compact post-action state, and changed fields when a before/after state is available. Use `--raw-result` to inspect the full parsed action result.
 
