@@ -392,6 +392,66 @@ def test_cli_act_reports_rest_recovery_after_rest_desync() -> None:
 
 
 @respx.mock
+def test_cli_act_refreshes_state_instead_of_using_stale_action_state() -> None:
+    before_state = {
+        "ok": True,
+        "data": {
+            "screen": "COMBAT",
+            "in_combat": True,
+            "available_actions": ["play_card"],
+            "combat": {
+                "player": {"current_hp": 40, "max_hp": 70, "block": 0, "energy": 1},
+                "hand": [{"index": 0, "name": "Setup", "playable": True, "energy_cost": 0}],
+                "enemies": [],
+            },
+        },
+    }
+    stale_embedded_state = {
+        "screen": "COMBAT",
+        "in_combat": True,
+        "available_actions": ["play_card"],
+        "combat": {
+            "player": {"current_hp": 40, "max_hp": 70, "block": 0, "energy": 1},
+            "hand": [
+                {"index": 0, "name": "Defend", "playable": True, "energy_cost": 1},
+                {"index": 1, "name": "Strike", "playable": True, "energy_cost": 1, "requires_target": True},
+                {"index": 2, "name": "Blade Dance", "playable": True, "energy_cost": 1},
+            ],
+            "enemies": [],
+        },
+    }
+    fresh_after_state = {
+        "ok": True,
+        "data": {
+            "screen": "COMBAT",
+            "in_combat": True,
+            "available_actions": ["play_card"],
+            "combat": {
+                "player": {"current_hp": 40, "max_hp": 70, "block": 0, "energy": 1},
+                "hand": [
+                    {"index": 0, "name": "Defend", "playable": True, "energy_cost": 1},
+                    {"index": 1, "name": "Blade Dance", "playable": True, "energy_cost": 1},
+                    {"index": 2, "name": "Strike", "playable": True, "energy_cost": 1, "requires_target": True},
+                ],
+                "enemies": [],
+            },
+        },
+    }
+    respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed", "state": stale_embedded_state}})
+    )
+    respx.get(f"{BASE_URL}/state").mock(
+        side_effect=[httpx.Response(200, json=before_state), httpx.Response(200, json=fresh_after_state)]
+    )
+
+    result = runner.invoke(app, ["act", "play_card", "0", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert "[1] Blade Dance" in result.stdout
+    assert "[2] Blade Dance" not in result.stdout
+
+
+@respx.mock
 def test_cli_act_blocks_resolve_rewards_when_card_reward_is_unloaded() -> None:
     route = respx.post(f"{BASE_URL}/action").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})

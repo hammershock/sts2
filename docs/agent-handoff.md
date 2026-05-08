@@ -170,6 +170,7 @@ Re-read `sts2 state` before acting, because the user may have played manually.
 3. Filtered action results:
    - YAML schemas live under `src/sts2_bridge/schemas/action/`.
    - Default `sts2 act` renders `status`, action args, compact post-action state, and before/after deltas as text.
+   - After a successful action POST, `sts2 act` refreshes `/state` and renders that fresh state when available, instead of trusting possibly stale state embedded in the action response.
    - `--raw-result` preserves full action-result inspection mode, rendered as text.
 
 4. Real HTTP samples:

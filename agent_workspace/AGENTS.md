@@ -72,6 +72,7 @@ Avoid `--layer raw` unless debugging the bridge. Raw output is large and expensi
 
 - Re-read `sts2 state` after every action. Card indices and legal actions can change immediately.
 - Do not chain card actions from stale hand data.
+- `sts2 act` now refreshes post-action state with a fresh `/state` read before rendering, but still prefer re-reading state before each separate decision.
 - Use numbered legal actions when possible.
 - Actions displayed as `option_index=0` can be run without extra args, for example `sts2 act 0`.
 - Shop and potion actions use `option_index`, for example `sts2 act buy_card 4` or `sts2 act use_potion 0`.
@@ -87,6 +88,7 @@ The engineering agent has already addressed these feedback items:
 - COMBAT view now includes powers, piles, deck, potions, relic details, card rarity/type, resolved card text, and glossary.
 - REWARD view now lists reward rows, card choices, alternatives, and warns when `resolve_rewards` may skip an unopened card reward. The CLI also blocks `resolve_rewards` / `collect_rewards_and_proceed` until claimable Card reward choices are visible.
 - EVENT view now lists the event title, text, and every option with its true `option_index`.
+- `sts2 act` now ignores stale embedded post-action state when a fresh `/state` read is available, reducing stale hand-index risk after discard/card-selection effects.
 - CARD_SELECTION view now lists the prompt, selection constraints, indexed candidate cards, and legal actions.
 - REST screens use API actions when available. If the API reports REST with no rest-progress action, even if it still exposes unrelated actions such as `discard_potion`, CLI view exposes marked Recovery options, not fake Legal actions.
 - REST recovery states now print `Recovery command: sts2 debug recover-rest` directly in `sts2 state`.

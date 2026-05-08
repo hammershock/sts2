@@ -148,7 +148,8 @@ def act(
         args = parse_action_args(resolved_action, list(ctx.args))
         _validate_action_against_state(resolved_action, before)
         result = client.act(resolved_action, args)
-        after = result.state if isinstance(result.state, GameState) else _try_state(client)
+        embedded_after = result.state if isinstance(result.state, GameState) else None
+        after = _try_state(client) or embedded_after
         if not raw_result:
             return _render_action_result(
                 build_action_result_view(
@@ -162,10 +163,8 @@ def act(
         data = _dump_model(result)
         if after is None:
             data["state_error"] = {"code": "state_unavailable", "message": "Could not read post-action state."}
-        elif data.get("state") is None:
+        else:
             data["state"] = build_agent_view(after)
-        elif isinstance(result.state, GameState):
-            data["state"] = build_agent_view(result.state)
         return _to_yaml(data)
 
     _run_text(command)
