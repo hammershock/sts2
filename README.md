@@ -42,6 +42,7 @@ sts2 debug health
 sts2 debug window-status
 sts2 debug windows
 sts2 debug click-window 0.5 0.4 --normalized --dry-run
+sts2 debug recover-rest --dry-run
 sts2 screenshot
 sts2 screenshot --activate-fallback
 ```
@@ -84,3 +85,5 @@ Help-only calls such as `sts2 --help`, `sts2 state --help`, and non-TTY no-arg `
 For Godot/Metal windows, macOS may refuse true background window capture. Use `--activate-fallback` as the final fallback: it briefly brings the game to the foreground for rectangle capture, then tries to restore the previous foreground app.
 
 `sts2 debug click-window X Y` is a last-resort macOS UI fallback when the HTTP API and structured state are stuck. Coordinates are relative to the selected game window; add `--normalized` to use 0..1 fractions and `--dry-run` to inspect the resolved screen point before clicking. It activates the game before clicking and restores the previous app by default. macOS may require Accessibility permission for the terminal app.
+
+`sts2 debug recover-rest` is a guarded version of the click fallback for the observed REST desync where clicking the top-left relic refreshes the UI/API state. It only runs on REST screens with no executable API actions unless `--force` is passed.

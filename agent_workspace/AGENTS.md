@@ -44,9 +44,12 @@ sts2 debug health
 sts2 debug window-status
 sts2 screenshot --activate-fallback
 sts2 debug click-window 0.5 0.4 --normalized --dry-run
+sts2 debug recover-rest --dry-run
 ```
 
 `sts2 debug click-window X Y` is a last-resort UI fallback when HTTP actions are stuck but the visible game is clickable. Coordinates are relative to the STS2 window. Prefer `--normalized` and always run `--dry-run` first; only click when the target is obvious from a screenshot.
+
+For the known REST desync after choosing Rest, prefer `sts2 debug recover-rest --dry-run`, then `sts2 debug recover-rest` if the dry run targets the game window. This clicks the top-left relic area, which has been observed to refresh the stuck UI/API state.
 
 ## State Reading
 
@@ -81,6 +84,7 @@ The engineering agent has already addressed these feedback items:
 - REST screens use API actions when available. If the API reports REST with no actions/options, CLI view exposes marked Recovery options, not Legal actions, so the Agent does not call backend-rejected fallback actions by mistake.
 - macOS `window-status`, screenshot, and YAML output now normalize PyObjC string subclasses and should not dump large tracebacks for ordinary CLI errors.
 - A last-resort `sts2 debug click-window` command exists for visible UI recovery when the HTTP backend is desynced.
+- A guarded `sts2 debug recover-rest` command exists for the recurring REST desync. The likely symptom is REST with no Legal actions after choosing Rest; manually clicking the top-left relic area refreshes it, and this command automates that click.
 
 Known limitation: if the HTTP backend rejects both `proceed` and `choose_rest_option` while the visible UI is still clickable, Python CLI cannot force a valid HTTP action. Use screenshot plus `debug click-window` only as a recovery fallback, then re-read `sts2 state`.
 

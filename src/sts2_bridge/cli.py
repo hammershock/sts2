@@ -276,6 +276,74 @@ def click_window_command(
     _run_text(command)
 
 
+@debug_app.command("recover-rest")
+def recover_rest_command(
+    base_url: BaseUrlOption = None,
+    api_timeout: TimeoutOption = 10.0,
+    owner: Annotated[str, typer.Option("--owner", help="macOS window owner name to search for.")] = "Slay the Spire 2",
+    window_id: Annotated[int | None, typer.Option("--window-id", help="Click a specific macOS window id.")] = None,
+    x: Annotated[
+        float,
+        typer.Option("--x", help="Normalized X coordinate for the top-left relic refresh click."),
+    ] = 0.04,
+    y: Annotated[
+        float,
+        typer.Option("--y", help="Normalized Y coordinate for the top-left relic refresh click."),
+    ] = 0.145,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Only report the resolved click and state check.")] = False,
+    force: Annotated[bool, typer.Option("--force", help="Allow recovery outside REST/no-action states.")] = False,
+) -> None:
+    """Recover a REST UI/API desync by clicking the top-left relic area."""
+    client = _client(base_url, api_timeout)
+
+    def command() -> str:
+        _require_macos()
+        from sts2_bridge.macos_screenshot import click_window
+
+        before = client.state()
+        actions = effective_available_actions(before)
+        recovery = has_recovery_options(before)
+        if not force and before.screen != "REST":
+            raise BridgeError(
+                "invalid_recovery_state",
+                "REST recovery can only run on REST screens unless --force is passed.",
+                details=_recovery_state_summary(before),
+                retryable=False,
+            )
+        if not force and actions:
+            raise BridgeError(
+                "invalid_recovery_state",
+                "REST recovery is only for REST states with no executable API actions.",
+                details=_recovery_state_summary(before),
+                retryable=False,
+            )
+        if not force and not recovery:
+            raise BridgeError(
+                "invalid_recovery_state",
+                "Current REST state does not expose recovery options.",
+                details=_recovery_state_summary(before),
+                retryable=False,
+            )
+
+        click = click_window(x, y, owner=owner, window_id=window_id, normalized=True, dry_run=dry_run)
+        after: dict[str, Any] | None = None
+        if not dry_run:
+            time.sleep(0.5)
+            after = _recovery_state_summary(client.state())
+
+        return _to_yaml(
+            {
+                "recovery": "rest_relic_refresh_click",
+                "dry_run": dry_run,
+                "before": _recovery_state_summary(before),
+                "click": click,
+                "after": after,
+            }
+        )
+
+    _run_text(command)
+
+
 @app.command()
 def screenshot(
     output: Annotated[
@@ -650,6 +718,20 @@ def _macos_window_status_or_error() -> dict[str, Any]:
         return window_status()
     except BridgeError as exc:
         return {"error": exc.to_dict()["error"]}
+
+
+def _recovery_state_summary(state: GameState) -> dict[str, Any]:
+    return {
+        "screen": state.screen,
+        "available_actions": effective_available_actions(state),
+        "has_recovery_options": has_recovery_options(state),
+        "floor": _run_field(state, "floor"),
+        "gold": _run_field(state, "gold"),
+    }
+
+
+def _run_field(state: GameState, key: str) -> Any:
+    return state.run.get(key) if isinstance(state.run, dict) else None
 
 
 def _plain_data(value: Any) -> Any:

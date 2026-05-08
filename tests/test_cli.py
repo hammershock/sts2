@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import sys
 
 import httpx
 import pytest
@@ -390,6 +391,7 @@ def test_cli_help_groups_debug_commands_and_removes_combat() -> None:
     assert "windows" in debug_result.stdout
     assert "window-status" in debug_result.stdout
     assert "click-window" in debug_result.stdout
+    assert "recover-rest" in debug_result.stdout
 
 
 def test_cli_without_args_prints_help_without_tty(isolated_logs) -> None:
@@ -423,6 +425,38 @@ def test_to_yaml_normalizes_string_subclasses() -> None:
         pass
 
     assert _to_yaml({"owner": ForeignString("Slay the Spire 2")}) == "owner: Slay the Spire 2\n"
+
+
+@respx.mock
+def test_cli_debug_recover_rest_dry_run(monkeypatch) -> None:
+    monkeypatch.setattr(sys, "platform", "darwin")
+    import sts2_bridge.macos_screenshot as macos_screenshot
+
+    click_calls: list[dict] = []
+
+    def fake_click_window(*args, **kwargs):
+        click_calls.append({"args": args, "kwargs": kwargs})
+        return {
+            "clicked": False,
+            "dry_run": True,
+            "screen_point": {"x": 101, "y": 202},
+        }
+
+    monkeypatch.setattr(macos_screenshot, "click_window", fake_click_window)
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_rest_missing_actions")))
+
+    result = runner.invoke(app, ["debug", "recover-rest", "--base-url", BASE_URL, "--dry-run"])
+
+    assert result.exit_code == 0
+    payload = yaml.safe_load(result.stdout)
+    assert payload["recovery"] == "rest_relic_refresh_click"
+    assert payload["before"]["screen"] == "REST"
+    assert payload["before"]["available_actions"] == []
+    assert payload["before"]["has_recovery_options"] is True
+    assert payload["click"]["screen_point"] == {"x": 101, "y": 202}
+    assert click_calls[0]["args"] == (0.04, 0.145)
+    assert click_calls[0]["kwargs"]["normalized"] is True
+    assert click_calls[0]["kwargs"]["dry_run"] is True
 
 
 def test_interactive_digit_chooses_map_option() -> None:

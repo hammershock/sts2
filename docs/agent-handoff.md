@@ -109,6 +109,7 @@ sts2 state --with-window
 sts2 debug window-status
 sts2 debug windows
 sts2 debug click-window 0.5 0.4 --normalized --dry-run
+sts2 debug recover-rest --dry-run
 sts2 screenshot
 sts2 screenshot --activate-fallback
 ```
@@ -182,6 +183,7 @@ Re-read `sts2 state` before acting, because the user may have played manually.
 6. macOS recovery tools:
    - `sts2 debug window-status` and `sts2 screenshot` return normalized YAML-safe primitives, including PyObjC string values.
    - `sts2 debug click-window X Y` clicks inside the selected STS2 window as a last-resort UI fallback. Use `--normalized` for 0..1 window-relative coordinates and `--dry-run` before real clicks. This is the recovery path for visible UI desyncs where the HTTP API rejects all actions.
+   - `sts2 debug recover-rest` is a guarded REST-specific recovery: it clicks the top-left relic area, which has been observed to refresh the stuck REST UI/API state after choosing Rest.
 
 ## Next Harness Improvements
 
