@@ -22,6 +22,12 @@ def test_parse_action_args_supports_mixed_positional_and_keyword_values() -> Non
     assert parse_action_args("play_card", ["0", "--target_index", "1"]) == {"card_index": 0, "target_index": 1}
 
 
+def test_parse_action_args_defaults_option_index_for_option_actions() -> None:
+    assert parse_action_args("choose_map_node", []) == {"option_index": 0}
+    assert parse_action_args("choose_map_node", ["2"]) == {"option_index": 2}
+    assert parse_action_args("choose_map_node", ["--option_index", "3"]) == {"option_index": 3}
+
+
 def test_parse_action_args_rejects_duplicate_args() -> None:
     with pytest.raises(BridgeError) as exc_info:
         parse_action_args("play_card", ["0", "--card_index", "1"])

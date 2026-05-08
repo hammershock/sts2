@@ -172,8 +172,50 @@ def test_cli_act_parses_numbered_action_and_keyword_args() -> None:
     assert json.loads(route.calls.last.request.content) == {"action": "play_card", "card_index": 0, "target_index": 1}
 
 
+@respx.mock
+def test_cli_act_uses_default_option_index_for_numbered_option_action() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
+    )
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "data": {
+                    "screen": "MAP",
+                    "available_actions": ["choose_map_node"],
+                    "run": {"floor": 2, "gold": 115},
+                    "map": {"available_nodes": [{"index": 0}]},
+                },
+            },
+        )
+    )
+
+    result = runner.invoke(app, ["act", "0", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": "choose_map_node", "option_index": 0}
+
+
+@respx.mock
 def test_cli_rejects_invalid_arg_shape() -> None:
-    result = runner.invoke(app, ["act", "play_card", "--arg", "card_index"])
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "data": {
+                    "screen": "COMBAT",
+                    "in_combat": True,
+                    "available_actions": ["play_card"],
+                    "combat": {"hand": [], "enemies": []},
+                },
+            },
+        )
+    )
+
+    result = runner.invoke(app, ["act", "play_card", "--arg", "card_index", "--base-url", BASE_URL])
 
     assert result.exit_code == 1
     payload = json.loads(result.stdout)

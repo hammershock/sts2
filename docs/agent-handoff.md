@@ -66,6 +66,8 @@ Important argument names discovered by real play:
 
 The preferred action syntax is `sts2 act ACTION_OR_INDEX [positional_args...] [--field value ...]`. The first argument can be a canonical action name, an alias without separators such as `playcard`, or a numbered action from the current `Legal actions` list. Positional args are mapped by action, for example `play_card 0 0` means `card_index=0,target_index=0`.
 
+Actions displayed with `option_index=0`, including `choose_map_node(option_index=0)`, default to `option_index=0` when no explicit option is passed. This makes `sts2 act 0` match the visible legal action when the only shown action is `[0] choose_map_node(option_index=0)`.
+
 When an invalid arg name is used, the mod often returns a useful message such as `requires option_index`.
 
 ## Useful CLI Commands

@@ -19,6 +19,16 @@ POSITIONAL_ARGUMENTS: dict[str, tuple[str, ...]] = {
     "select_deck_card": ("option_index",),
 }
 
+DEFAULT_ARGUMENTS: dict[str, dict[str, Any]] = {
+    "choose_map_node": {"option_index": 0},
+    "claim_reward": {"option_index": 0},
+    "choose_event_option": {"option_index": 0},
+    "choose_rest_option": {"option_index": 0},
+    "choose_reward_card": {"option_index": 0},
+    "select_character": {"option_index": 0},
+    "select_deck_card": {"option_index": 0},
+}
+
 
 def resolve_action(action_ref: str, available_actions: list[str]) -> str:
     if action_ref.isdigit():
@@ -82,6 +92,8 @@ def _parse_tokens(action: str, tokens: list[str]) -> dict[str, Any]:
         positional_index += 1
         index += 1
 
+    for key, value in DEFAULT_ARGUMENTS.get(action, {}).items():
+        parsed.setdefault(key, value)
     return parsed
 
 
