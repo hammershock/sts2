@@ -171,17 +171,25 @@ Re-read `sts2 state` before acting, because the user may have played manually.
    - Split additional screen-specific schemas when raw samples show large or unstable payloads.
    - Keep schema files as the primary contract for what reaches an Agent.
 
-3. Add planner/pruner support later:
+3. Explore richer card/keyword explanations:
+   - Current `/state` exposes `agent_view.combat.hand[*].line`, `keywords`, and `agent_view.glossary`.
+   - Full card payloads also expose `resolved_rules_text`, `rules_text`, and `dynamic_values` such as `WeakPower=1`.
+   - The current HTTP surface does not expose the full UI keyword tooltip text for `虚弱`, including the 25% attack damage reduction constant.
+   - Initial binary inspection found mod symbols around `BuildAgentGlossary`, `AgentKeywordDefinitions`, and glossary matching, so the right next step is probably a mod/API extension rather than Python-side guessing.
+   - Investigate whether the mod/game can expose full UI tooltip text and dynamic gameplay constants such as Weak's damage reduction percentage.
+   - Do not hardcode keyword mechanics in the bridge; prefer game/mod-provided values, and mark missing details as unavailable.
+
+4. Add planner/pruner support later:
    - Enumerate legal card sequences for current turn using refreshed state after simulated or real actions.
    - Score candidate sequences by expected damage, incoming damage prevented, lethal, energy use, card draw, powers applied, and HP risk.
    - Return top-k action sequences plus a short reason, not the full tree.
 
-4. Add prediction reconciliation later:
+5. Add prediction reconciliation later:
    - Predict next state after a planned sequence.
    - Execute one action at a time.
    - After each real state, compare key fields and either continue, repair the plan, or stop for Agent input.
 
-5. Add benchmarks:
+6. Add benchmarks:
    - Record compact state/action traces.
    - Replay states against heuristic and Agent-assisted policies.
    - Track win-rate proxies, HP lost per floor, unnecessary Agent calls, token use, and action latency.
