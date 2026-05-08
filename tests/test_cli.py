@@ -123,6 +123,7 @@ def test_cli_state_renders_rest_fallback_options() -> None:
     assert "Recovery options:" in result.stdout
     assert "[0] Rest | Heal at the rest site. | recovery: API did not expose executable rest actions" in result.stdout
     assert "[1] Smith | Upgrade one card. | recovery: API did not expose executable rest actions" in result.stdout
+    assert "Recovery command: sts2 debug recover-rest" in result.stdout
     assert "Legal actions:" not in result.stdout
 
 
@@ -341,6 +342,35 @@ def test_cli_act_rejects_rest_fallback_action_when_api_omits_actions() -> None:
     assert result.exit_code == 1
     assert "ERROR invalid_action:" in result.stdout
     assert not route.calls
+
+
+@respx.mock
+def test_cli_act_reports_rest_recovery_after_rest_desync() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
+    )
+    before_state = {
+        "ok": True,
+        "data": {
+            "screen": "REST",
+            "available_actions": ["choose_rest_option"],
+            "run": {"floor": 11, "gold": 147, "current_hp": 26, "max_hp": 70},
+            "rest": {"options": [{"index": 0, "label": "Rest"}]},
+        },
+    }
+    respx.get(f"{BASE_URL}/state").mock(
+        side_effect=[
+            httpx.Response(200, json=before_state),
+            httpx.Response(200, json=fixture("state_rest_missing_actions")),
+        ]
+    )
+
+    result = runner.invoke(app, ["act", "choose_rest_option", "0", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": "choose_rest_option", "option_index": 0}
+    assert "REST recovery:" in result.stdout
+    assert "Next: sts2 debug recover-rest" in result.stdout
 
 
 @respx.mock

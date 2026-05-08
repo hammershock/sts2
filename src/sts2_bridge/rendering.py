@@ -190,6 +190,8 @@ def render_rest_view(data: dict[str, Any]) -> str:
         lines.extend(["", heading])
         for option in options:
             lines.append(_rest_option_line(option))
+        if _has_fallback_options(options):
+            lines.append("Recovery command: sts2 debug recover-rest")
 
     actions = data.get("available_actions") or []
     if actions:

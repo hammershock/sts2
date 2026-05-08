@@ -185,7 +185,7 @@ Re-read `sts2 state` before acting, because the user may have played manually.
 6. macOS recovery tools:
    - `sts2 debug window-status` and `sts2 screenshot` return normalized YAML-safe primitives, including PyObjC string values.
    - `sts2 debug click-window X Y` clicks inside the selected STS2 window as a last-resort UI fallback. Use `--normalized` for 0..1 window-relative coordinates and `--dry-run` before real clicks. This is the recovery path for visible UI desyncs where the HTTP API rejects all actions.
-   - `sts2 debug recover-rest` is a guarded REST-specific recovery. It defaults to the proven top-left relic target, presses Escape to close the relic modal, can target `relic`, `top-bar-relic`, `rest-card`, or explicit normalized `--x/--y` coordinates, and reports `status: recovered` or `status: unchanged` after re-reading state.
+   - `sts2 debug recover-rest` is a guarded REST-specific recovery. It defaults to the proven top-left relic target, presses Escape to close the relic modal, can target `relic`, `top-bar-relic`, `rest-card`, or explicit normalized `--x/--y` coordinates, and reports `status: recovered` or `status: unchanged` after re-reading state. REST recovery views print `Recovery command: sts2 debug recover-rest`.
 
 ## Next Harness Improvements
 

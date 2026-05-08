@@ -717,6 +717,15 @@ def _render_action_result(data: dict[str, Any]) -> str:
     state = data.get("state")
     if state:
         lines.extend(["", "State:", render_state_view(state).rstrip()])
+        if _state_has_rest_recovery_options(state):
+            lines.extend(
+                [
+                    "",
+                    "REST recovery:",
+                    "The API accepted the action but left REST without an executable rest-progress action.",
+                    "Next: sts2 debug recover-rest",
+                ]
+            )
     return "\n".join(lines) + "\n"
 
 
@@ -754,6 +763,18 @@ def _action_signature_text(name: str, args: list[Any]) -> str:
         else:
             parts.append(f"optional {arg_name}")
     return f"{name}({', '.join(parts)})" if parts else name
+
+
+def _state_has_rest_recovery_options(state: Any) -> bool:
+    if not isinstance(state, dict) or state.get("screen") != "REST":
+        return False
+    rest = state.get("rest")
+    if not isinstance(rest, dict):
+        return False
+    options = rest.get("options")
+    if not isinstance(options, list):
+        return False
+    return any(isinstance(option, dict) and option.get("source") == "fallback" for option in options)
 
 
 def _select_state_view(*, raw: bool, agent_view: bool, view: str) -> str:

@@ -51,6 +51,8 @@ sts2 debug recover-rest --dry-run
 
 For the known REST desync after choosing Rest, prefer `sts2 debug recover-rest --dry-run`, then `sts2 debug recover-rest` if the dry run targets the game window. The default target is the proven top-left relic point and the command presses Escape after clicking to close the relic modal. Check the returned `status`: `recovered` means re-read state and continue; `unchanged` means try the suggested alternate targets such as `--target rest-card` or inspect a screenshot and use explicit `debug click-window` coordinates.
 
+If `sts2 act choose_rest_option 0` completes and the next state still shows `Recovery options`, this is the recurring REST desync. Treat it as a UI/API sync issue, not a normal decision point. Run `sts2 debug recover-rest`, then `sts2 state`.
+
 ## State Reading
 
 Default `sts2 state` is the Agent view. Prefer it over raw payloads.
@@ -60,7 +62,7 @@ Default `sts2 state` is the Agent view. Prefer it over raw payloads.
 - COMBAT also includes powers, piles, deck, and potions when the mod exposes them. Prefer this compact view over raw state for tactical decisions.
 - REWARD shows reward rows, card choices, and skip alternatives. If a Card reward says choices are not loaded, claim that Card reward first; `resolve_rewards` may skip unresolved card rewards.
 - CARD_SELECTION shows the prompt, selection constraints, and indexed candidate cards. Use the shown option index with `select_deck_card`.
-- REST normally shows legal actions from the mod. If it shows Recovery options, the API omitted executable rest actions; do not run `sts2 act` for those options. Use screenshot plus `debug click-window` only when recovery is necessary.
+- REST normally shows legal actions from the mod. If it shows Recovery options, the API omitted executable rest actions; do not run `sts2 act` for those options. Use `sts2 debug recover-rest` for the known post-rest desync; use screenshot plus `debug click-window` only for other visible UI recovery.
 - Other screens may be less detailed; use legal actions and concise state text first.
 
 Avoid `--layer raw` unless debugging the bridge. Raw output is large and expensive.
@@ -85,9 +87,11 @@ The engineering agent has already addressed these feedback items:
 - REWARD view now lists reward rows, card choices, alternatives, and warns when `resolve_rewards` may skip an unopened card reward. The CLI also blocks `resolve_rewards` / `collect_rewards_and_proceed` until claimable Card reward choices are visible.
 - CARD_SELECTION view now lists the prompt, selection constraints, indexed candidate cards, and legal actions.
 - REST screens use API actions when available. If the API reports REST with no rest-progress action, even if it still exposes unrelated actions such as `discard_potion`, CLI view exposes marked Recovery options, not fake Legal actions.
+- REST recovery states now print `Recovery command: sts2 debug recover-rest` directly in `sts2 state`.
 - macOS `window-status`, screenshot, and YAML output now normalize PyObjC string subclasses and should not dump large tracebacks for ordinary CLI errors.
 - A last-resort `sts2 debug click-window` command exists for visible UI recovery when the HTTP backend is desynced.
 - A guarded `sts2 debug recover-rest` command exists for the recurring REST desync. The likely symptom is REST with no Legal actions after choosing Rest; manually clicking the top-left relic area refreshes it, and this command automates that click.
+- `sts2 act choose_rest_option ...` now adds a REST recovery note if the post-action state immediately lands in the known desync state.
 
 Known limitation: if the HTTP backend rejects both `proceed` and `choose_rest_option` while the visible UI is still clickable, Python CLI cannot force a valid HTTP action. Use `sts2 debug recover-rest` for the recurring REST relic-click refresh; use screenshot plus `debug click-window` only for other visible UI recovery, then re-read `sts2 state`.
 
