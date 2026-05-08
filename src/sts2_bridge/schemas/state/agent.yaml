@@ -5,7 +5,8 @@ fields:
   reward: reward
   selection: selection
   chest: chest
-  event: event
+  event:
+    transform: event
   shop: shop
   rest: rest
   character_select: character_select

@@ -98,6 +98,24 @@ def test_cli_state_renders_compact_map_view() -> None:
 
 
 @respx.mock
+def test_cli_state_renders_event_title_and_options() -> None:
+    event_sample = json.loads(Path("samples/http/state/20260508-224602-02_event.json").read_text())
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(200, json=event_sample)
+    )
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("EVENT floor=1 gold=99")
+    assert "Event: 涅奥 (NEOW)" in result.stdout
+    assert "[0] 轰鸣海螺 | 在精英战的战斗开始时，额外抽2张牌。 | relic preview" in result.stdout
+    assert "[1] 金色珍珠 | 拾起时，获得150金币。 | relic preview" in result.stdout
+    assert "[2] 沉重石板 | 从3张稀有牌中选择1张加入你的牌组。将1张受伤加入你的牌组。 | relic preview" in result.stdout
+    assert "Legal actions:\n[0] choose_event_option(option_index=0)" in result.stdout
+
+
+@respx.mock
 def test_cli_state_renders_card_selection_options() -> None:
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_card_selection")))
 

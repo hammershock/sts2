@@ -59,6 +59,7 @@ Default `sts2 state` is the Agent view. Prefer it over raw payloads.
 
 - COMBAT shows HP, block, energy, enemies, intents, playable hand, legal actions, relics, and glossary.
 - MAP shows current position, choices, key reachable nodes, and a compact reachable map.
+- EVENT shows the event title, event text, indexed option titles/descriptions, and option flags.
 - COMBAT also includes powers, piles, deck, and potions when the mod exposes them. Prefer this compact view over raw state for tactical decisions.
 - REWARD shows reward rows, card choices, and skip alternatives. If a Card reward says choices are not loaded, claim that Card reward first; `resolve_rewards` may skip unresolved card rewards.
 - CARD_SELECTION shows the prompt, selection constraints, and indexed candidate cards. Use the shown option index with `select_deck_card`.
@@ -85,6 +86,7 @@ The engineering agent has already addressed these feedback items:
 - Shop and potion action arguments now consistently use `option_index`; positional shorthand works for `buy_*`, `use_potion`, and `discard_potion`.
 - COMBAT view now includes powers, piles, deck, potions, relic details, card rarity/type, resolved card text, and glossary.
 - REWARD view now lists reward rows, card choices, alternatives, and warns when `resolve_rewards` may skip an unopened card reward. The CLI also blocks `resolve_rewards` / `collect_rewards_and_proceed` until claimable Card reward choices are visible.
+- EVENT view now lists the event title, text, and every option with its true `option_index`.
 - CARD_SELECTION view now lists the prompt, selection constraints, indexed candidate cards, and legal actions.
 - REST screens use API actions when available. If the API reports REST with no rest-progress action, even if it still exposes unrelated actions such as `discard_potion`, CLI view exposes marked Recovery options, not fake Legal actions.
 - REST recovery states now print `Recovery command: sts2 debug recover-rest` directly in `sts2 state`.

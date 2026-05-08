@@ -63,6 +63,8 @@ def _state_schema_name(state: GameState, view: str) -> str:
         return "state/selection.yaml"
     if state.screen == "REST":
         return "state/rest.yaml"
+    if state.screen == "EVENT":
+        return "state/event.yaml"
     return "state/common.yaml"
 
 
@@ -148,6 +150,8 @@ def _transform(root: Any, current: Any, rule: Schema, state: Any) -> Any:
         return _rest_view(root)
     if name == "reward":
         return _reward_view(root)
+    if name == "event":
+        return _event_view(root)
     if name == "incoming_damage":
         if isinstance(root, GameState):
             return estimate_incoming_damage(root)
@@ -418,6 +422,40 @@ def _reward_alternatives(root: Any, reward: dict[str, Any]) -> list[dict[str, An
             }
         )
     return result
+
+
+def _event_view(root: Any) -> dict[str, Any]:
+    event = _get_path(root, "event")
+    if not isinstance(event, dict):
+        return {}
+
+    agent_options = _indexed_agent_lines(_get_path(root, "agent_view.event.options"))
+    options = event.get("options") if isinstance(event.get("options"), list) else []
+    return {
+        "event_id": event.get("event_id"),
+        "title": event.get("title"),
+        "description": event.get("description"),
+        "is_finished": event.get("is_finished"),
+        "options": [
+            _event_option_view(option, index, agent_options)
+            for index, option in enumerate(options)
+            if isinstance(option, dict)
+        ],
+    }
+
+
+def _event_option_view(option: dict[str, Any], index: int, agent_options: dict[int, str]) -> dict[str, Any]:
+    option_index = option.get("index", index)
+    return {
+        "option_index": option_index,
+        "title": option.get("title") or option.get("label") or option.get("name"),
+        "description": option.get("description"),
+        "line": agent_options.get(option_index) if isinstance(option_index, int) else None,
+        "locked": option.get("is_locked") or option.get("locked"),
+        "proceed": option.get("is_proceed") or option.get("proceed"),
+        "will_kill_player": option.get("will_kill_player"),
+        "has_relic_preview": option.get("has_relic_preview"),
+    }
 
 
 def _indexed_agent_lines(items: Any) -> dict[int, str]:

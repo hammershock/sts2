@@ -15,6 +15,8 @@ def render_state_view(data: dict[str, Any]) -> str:
         return render_reward_view(data)
     if data.get("screen") == "REST" and isinstance(data.get("rest"), dict):
         return render_rest_view(data)
+    if data.get("screen") == "EVENT" and isinstance(data.get("event"), dict):
+        return render_event_view(data)
     return render_generic_view(data)
 
 
@@ -202,6 +204,34 @@ def render_rest_view(data: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def render_event_view(data: dict[str, Any]) -> str:
+    event = data["event"]
+    options = event.get("options") or []
+
+    lines = [_header_line(data)]
+    title = event.get("title")
+    if title:
+        event_id = event.get("event_id")
+        suffix = f" ({event_id})" if event_id else ""
+        lines.append(f"Event: {_one_line(title)}{suffix}")
+    description = event.get("description")
+    if description:
+        lines.append(f"Text: {_one_line(description)}")
+
+    if options:
+        lines.extend(["", "Options:"])
+        for option in options:
+            lines.append(_event_option_line(option))
+
+    actions = data.get("available_actions") or []
+    if actions:
+        lines.extend(["", "Legal actions:"])
+        for index, action in enumerate(actions):
+            lines.append(f"[{index}] {_action_signature(action, data)}")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def render_reward_view(data: dict[str, Any]) -> str:
     reward = data["reward"]
     rows = reward.get("rewards") or []
@@ -345,6 +375,26 @@ def _rest_option_line(option: dict[str, Any]) -> str:
         traits.append("locked")
     if option.get("source") == "fallback":
         traits.append("recovery: API did not expose executable rest actions")
+    return " | ".join(traits)
+
+
+def _event_option_line(option: dict[str, Any]) -> str:
+    title = option.get("title")
+    description = option.get("description")
+    line = option.get("line")
+    if line and not title and not description:
+        text = line
+    else:
+        text = " | ".join(str(item) for item in (title, description) if item)
+    traits = [f"[{_value(option.get('option_index'))}] {_one_line(text or 'Option')}"]
+    if option.get("locked"):
+        traits.append("locked")
+    if option.get("proceed"):
+        traits.append("proceed")
+    if option.get("will_kill_player"):
+        traits.append("will kill")
+    if option.get("has_relic_preview"):
+        traits.append("relic preview")
     return " | ".join(traits)
 
 
@@ -524,3 +574,7 @@ def _value(value: Any) -> str:
 
 def _clean_markup(text: str) -> str:
     return re.sub(r"\[/?[A-Za-z0-9_#-]+\]", "", text)
+
+
+def _one_line(value: Any) -> str:
+    return re.sub(r"\s+", " ", _clean_markup(str(value))).strip()
