@@ -1,0 +1,69 @@
+{
+  "ok": true,
+  "request_id": "req_test_selection",
+  "data": {
+    "state_version": 7,
+    "run_id": "seed-123",
+    "screen": "CARD_SELECTION",
+    "in_combat": true,
+    "turn": 3,
+    "available_actions": ["select_deck_card", "confirm_selection"],
+    "combat": {
+      "player": {
+        "current_hp": 63,
+        "max_hp": 75,
+        "block": 4,
+        "energy": 1,
+        "stars": 0
+      },
+      "hand": [],
+      "enemies": []
+    },
+    "run": {
+      "floor": 5,
+      "gold": 88
+    },
+    "selection": {
+      "kind": "combat_hand_select",
+      "prompt": "[center]选择1张牌保留。[/center]",
+      "min_select": 1,
+      "max_select": 1,
+      "selected_count": 0,
+      "requires_confirmation": true,
+      "can_confirm": false,
+      "cards": [
+        {
+          "index": 0,
+          "card_id": "Strike",
+          "name": "Strike",
+          "upgraded": false,
+          "card_type": "Attack",
+          "rarity": "Basic",
+          "energy_cost": 1,
+          "resolved_rules_text": "Deal 6 damage."
+        },
+        {
+          "index": 1,
+          "card_id": "Defend",
+          "name": "Defend",
+          "upgraded": false,
+          "card_type": "Skill",
+          "rarity": "Basic",
+          "energy_cost": 1,
+          "resolved_rules_text": "Gain 5 Block."
+        }
+      ]
+    },
+    "agent_view": {
+      "selection": {
+        "cards": [
+          {"i": 0, "line": "Strike [1]: Deal 6 damage.", "keywords": []},
+          {"i": 1, "line": "Defend [1]: Gain 5 Block.", "keywords": ["Block"]}
+        ]
+      },
+      "glossary": {
+        "Block": "Block prevents attack damage."
+      }
+    }
+  }
+}

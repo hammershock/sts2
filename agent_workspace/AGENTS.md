@@ -51,6 +51,7 @@ Default `sts2 state` is the Agent view. Prefer it over raw payloads.
 - COMBAT shows HP, block, energy, enemies, intents, playable hand, legal actions, relics, and glossary.
 - MAP shows current position, choices, key reachable nodes, and a compact reachable map.
 - COMBAT also includes powers, piles, deck, and potions when the mod exposes them. Prefer this compact view over raw state for tactical decisions.
+- CARD_SELECTION shows the prompt, selection constraints, and indexed candidate cards. Use the shown option index with `select_deck_card`.
 - Other screens may be less detailed; use legal actions and concise state text first.
 
 Avoid `--layer raw` unless debugging the bridge. Raw output is large and expensive.
@@ -74,7 +75,7 @@ In non-TTY Agent execution, `sts2` prints help instead of entering interactive m
 Interactive keys:
 
 - Enter: refresh, or take the only unambiguous non-card action.
-- `0-9`: play that combat hand card, or choose that map/reward option.
+- `0-9`: play that combat hand card, or choose that map/reward/card-selection option.
 - `e`: end turn.
 - `c`: collect rewards and proceed.
 - `r`: resolve rewards.

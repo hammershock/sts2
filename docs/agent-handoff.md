@@ -87,7 +87,7 @@ sts2 wait --timeout 15
 sts2 debug health
 ```
 
-No-arg `sts2` starts an interactive mode only when stdin/stdout are TTYs. In non-TTY agent execution it prints help. Interactive keys: digits choose map/reward options or play combat cards, `e` ends the turn, `c` collects rewards and proceeds, `r` resolves rewards, Enter refreshes or takes the only unambiguous non-card action, `?` shows help, and `q` quits.
+No-arg `sts2` starts an interactive mode only when stdin/stdout are TTYs. In non-TTY agent execution it prints help. Interactive keys: digits choose map/reward/card-selection options or play combat cards, `e` ends the turn, `c` collects rewards and proceeds, `r` resolves rewards, Enter refreshes or takes the only unambiguous non-card action, `?` shows help, and `q` quits.
 
 Execute actions:
 
@@ -157,6 +157,7 @@ Re-read `sts2 state` before acting, because the user may have played manually.
    - The default COMBAT view is concise text built from filtered schema output.
    - The default COMBAT view includes current relics, player/enemy powers, playable card rarity/type, resolved card rules text, piles, deck, potions, and the current glossary exposed by the mod.
    - The default MAP view includes current position, indexed path choices, key reachable elite/rest/shop/treasure nodes, and a compact row-by-row reachable map.
+   - The default CARD_SELECTION view includes the prompt, selection constraints, indexed candidate cards, card rarity/type/cost/rules text, and legal actions.
    - `--view decision`, `--view combat`, and `--view agent` expose progressively richer filtered views.
    - `--raw` remains opt-in for parser/debug work.
 

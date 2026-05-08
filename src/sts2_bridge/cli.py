@@ -372,6 +372,8 @@ def _numeric_interactive_action(
         return "choose_map_node", {"option_index": index}
     if state.screen in {"REWARD", "CARD_REWARD"} and "claim_reward" in state.available_actions:
         return "claim_reward", {"option_index": index}
+    if state.screen == "CARD_SELECTION" and "select_deck_card" in state.available_actions:
+        return "select_deck_card", {"option_index": index}
     if state.screen == "COMBAT" and "play_card" in state.available_actions:
         card_args = _card_args_from_view(index, view)
         if card_args is not None:

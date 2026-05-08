@@ -96,6 +96,21 @@ def test_cli_state_renders_compact_map_view() -> None:
 
 
 @respx.mock
+def test_cli_state_renders_card_selection_options() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_card_selection")))
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("CARD_SELECTION turn=3 floor=5 gold=88")
+    assert "Prompt: 选择1张牌保留。" in result.stdout
+    assert "Selection: combat_hand_select | select 1-1 | selected 0 | requires confirm" in result.stdout
+    assert "[0] Strike | Basic Attack | cost 1 | Deal 6 damage." in result.stdout
+    assert "[1] Defend | Basic Skill | cost 1 | Gain 5 Block. | keywords Block" in result.stdout
+    assert "Legal actions:\n[0] select_deck_card(option_index=0)\n[1] confirm_selection" in result.stdout
+
+
+@respx.mock
 def test_cli_act_rejects_legacy_arg_option() -> None:
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_combat")))
 
@@ -369,6 +384,12 @@ def test_interactive_reward_digit_claims_reward_option() -> None:
     state = GameState.model_validate({"screen": "REWARD", "available_actions": ["claim_reward"]})
 
     assert _interactive_action_from_input("1", state, {}) == ("claim_reward", {"option_index": 1})
+
+
+def test_interactive_digit_selects_card_selection_option() -> None:
+    state = GameState.model_validate(fixture("state_card_selection")["data"])
+
+    assert _interactive_action_from_input("1", state, {}) == ("select_deck_card", {"option_index": 1})
 
 
 def _read_log_records(root: Path, category: str) -> list[dict]:

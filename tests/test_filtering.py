@@ -51,3 +51,15 @@ def test_filter_state_extracts_multi_intents_on_real_sample() -> None:
 
     assert view["combat"]["incoming_damage"] == 6
     assert view["combat"]["enemies"][0]["intents"] == "attack 6, defend"
+
+
+def test_filter_state_extracts_card_selection_options() -> None:
+    state = GameState.model_validate(json.loads(Path("tests/fixtures/state_card_selection.json").read_text())["data"])
+
+    view = filter_state(state)
+
+    assert view["screen"] == "CARD_SELECTION"
+    assert view["selection"]["kind"] == "combat_hand_select"
+    assert view["selection"]["cards"][0]["option_index"] == 0
+    assert view["selection"]["cards"][0]["name"] == "Strike"
+    assert view["selection"]["cards"][1]["keywords"] == ["Block"]

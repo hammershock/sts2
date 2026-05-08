@@ -9,6 +9,8 @@ def render_state_view(data: dict[str, Any]) -> str:
         return render_combat_view(data)
     if data.get("screen") == "MAP" and isinstance(data.get("map"), dict):
         return render_map_view(data)
+    if data.get("screen") == "CARD_SELECTION" and isinstance(data.get("selection"), dict):
+        return render_selection_view(data)
     return render_generic_view(data)
 
 
@@ -138,6 +140,38 @@ def render_map_view(data: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def render_selection_view(data: dict[str, Any]) -> str:
+    selection = data["selection"]
+    cards = selection.get("cards") or []
+    prompt = selection.get("prompt")
+
+    lines = [_header_line(data)]
+    if prompt:
+        lines.append(f"Prompt: {_clean_markup(str(prompt))}")
+    details = _selection_details(selection)
+    if details:
+        lines.append(f"Selection: {details}")
+
+    if cards:
+        lines.extend(["", "Options:"])
+        for card in cards:
+            lines.append(_selection_card_line(card))
+
+    actions = data.get("available_actions") or []
+    if actions:
+        lines.extend(["", "Legal actions:"])
+        for index, action in enumerate(actions):
+            lines.append(f"[{index}] {_action_signature(action, data)}")
+
+    glossary = data.get("glossary") or {}
+    if glossary:
+        lines.extend(["", "Glossary:"])
+        for term in sorted(glossary):
+            lines.append(f"- {term}: {_clean_markup(glossary[term])}")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _header_line(data: dict[str, Any]) -> str:
     parts = [str(data.get("screen") or "UNKNOWN")]
     if data.get("turn") is not None:
@@ -183,6 +217,43 @@ def _card_line(card: dict[str, Any]) -> str:
         target_ids = [f"enemy[{target['target_index']}]" for target in targets if target.get("target_index") is not None]
         target = ", ".join(target_ids) if target_ids else "enemy"
     traits.append(f"target {target}")
+    if text:
+        traits.append(_clean_markup(str(text)))
+    keywords = card.get("keywords") or []
+    if keywords:
+        traits.append(f"keywords {', '.join(str(keyword) for keyword in keywords)}")
+    return " | ".join(traits)
+
+
+def _selection_details(selection: dict[str, Any]) -> str:
+    parts = []
+    if selection.get("kind"):
+        parts.append(str(selection["kind"]))
+    min_select = selection.get("min_select")
+    max_select = selection.get("max_select")
+    if min_select is not None or max_select is not None:
+        parts.append(f"select {_value(min_select)}-{_value(max_select)}")
+    if selection.get("selected_count") is not None:
+        parts.append(f"selected {_value(selection.get('selected_count'))}")
+    if selection.get("requires_confirmation"):
+        parts.append("requires confirm")
+    if selection.get("can_confirm"):
+        parts.append("can confirm")
+    return " | ".join(parts)
+
+
+def _selection_card_line(card: dict[str, Any]) -> str:
+    traits = [
+        f"[{_value(card.get('option_index'))}] {card.get('name') or card.get('card_id') or 'Card'}",
+    ]
+    metadata = " ".join(str(value) for value in [card.get("rarity"), card.get("card_type")] if value)
+    if metadata:
+        traits.append(metadata)
+    if card.get("upgraded"):
+        traits.append("upgraded")
+    if card.get("cost") is not None:
+        traits.append(f"cost {card.get('cost')}")
+    text = card.get("resolved_rules_text")
     if text:
         traits.append(_clean_markup(str(text)))
     keywords = card.get("keywords") or []

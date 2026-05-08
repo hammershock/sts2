@@ -58,6 +58,8 @@ def _state_schema_name(state: GameState, view: str) -> str:
         return "state/map.yaml"
     if state.screen in {"REWARD", "CARD_REWARD"}:
         return "state/reward.yaml"
+    if state.screen == "CARD_SELECTION":
+        return "state/selection.yaml"
     return "state/common.yaml"
 
 
@@ -135,6 +137,8 @@ def _transform(root: Any, current: Any, rule: Schema, state: Any) -> Any:
         return _piles_view(root)
     if name == "potions":
         return _potions_view(root)
+    if name == "selection":
+        return _selection_view(root)
     if name == "incoming_damage":
         if isinstance(root, GameState):
             return estimate_incoming_damage(root)
@@ -215,9 +219,11 @@ def _card_keywords(root: Any, card: Any) -> list[str]:
         return [str(item) for item in direct_value if item]
 
     index = _get_path(card, "index")
-    hand = _get_path(root, "agent_view.combat.hand")
-    if isinstance(hand, list):
-        for item in hand:
+    for path in ("agent_view.combat.hand", "agent_view.selection.cards"):
+        items = _get_path(root, path)
+        if not isinstance(items, list):
+            continue
+        for item in items:
             if not isinstance(item, dict) or item.get("i") != index:
                 continue
             keywords = item.get("keywords")
@@ -309,6 +315,38 @@ def _potions_view(root: Any) -> list[dict[str, Any]]:
             }
         )
     return result
+
+
+def _selection_view(root: Any) -> dict[str, Any]:
+    selection = _get_path(root, "selection")
+    if not isinstance(selection, dict):
+        return {}
+
+    cards = selection.get("cards") if isinstance(selection.get("cards"), list) else []
+    return {
+        "kind": selection.get("kind"),
+        "prompt": selection.get("prompt"),
+        "min_select": selection.get("min_select"),
+        "max_select": selection.get("max_select"),
+        "selected_count": selection.get("selected_count"),
+        "requires_confirmation": selection.get("requires_confirmation"),
+        "can_confirm": selection.get("can_confirm"),
+        "cards": [_selection_card_view(root, card) for card in cards if isinstance(card, dict)],
+    }
+
+
+def _selection_card_view(root: Any, card: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "option_index": card.get("index"),
+        "name": card.get("name") or card.get("card_id"),
+        "card_id": card.get("card_id"),
+        "upgraded": card.get("upgraded"),
+        "card_type": card.get("card_type"),
+        "rarity": card.get("rarity"),
+        "cost": card.get("energy_cost"),
+        "resolved_rules_text": card.get("resolved_rules_text") or card.get("rules_text"),
+        "keywords": _card_keywords(root, card),
+    }
 
 
 def _pile_cards(piles: dict[str, Any], name: str) -> list[Any]:
