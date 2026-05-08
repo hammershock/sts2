@@ -84,12 +84,12 @@ The engineering agent has already addressed these feedback items:
 - COMBAT view now includes powers, piles, deck, potions, relic details, card rarity/type, resolved card text, and glossary.
 - REWARD view now lists reward rows, card choices, alternatives, and warns when `resolve_rewards` may skip an unopened card reward. The CLI also blocks `resolve_rewards` / `collect_rewards_and_proceed` until claimable Card reward choices are visible.
 - CARD_SELECTION view now lists the prompt, selection constraints, indexed candidate cards, and legal actions.
-- REST screens use API actions when available. If the API reports REST with no actions/options, CLI view exposes marked Recovery options, not Legal actions, so the Agent does not call backend-rejected fallback actions by mistake.
+- REST screens use API actions when available. If the API reports REST with no rest-progress action, even if it still exposes unrelated actions such as `discard_potion`, CLI view exposes marked Recovery options, not fake Legal actions.
 - macOS `window-status`, screenshot, and YAML output now normalize PyObjC string subclasses and should not dump large tracebacks for ordinary CLI errors.
 - A last-resort `sts2 debug click-window` command exists for visible UI recovery when the HTTP backend is desynced.
 - A guarded `sts2 debug recover-rest` command exists for the recurring REST desync. The likely symptom is REST with no Legal actions after choosing Rest; manually clicking the top-left relic area refreshes it, and this command automates that click.
 
-Known limitation: if the HTTP backend rejects both `proceed` and `choose_rest_option` while the visible UI is still clickable, Python CLI cannot force a valid HTTP action. Use screenshot plus `debug click-window` only as a recovery fallback, then re-read `sts2 state`.
+Known limitation: if the HTTP backend rejects both `proceed` and `choose_rest_option` while the visible UI is still clickable, Python CLI cannot force a valid HTTP action. Use `sts2 debug recover-rest` for the recurring REST relic-click refresh; use screenshot plus `debug click-window` only for other visible UI recovery, then re-read `sts2 state`.
 
 ## Interactive Mode
 

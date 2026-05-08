@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "request_id": "req_test_rest_potion_only",
+  "data": {
+    "state_version": 9,
+    "run_id": "seed-rest",
+    "screen": "REST",
+    "in_combat": false,
+    "available_actions": ["discard_potion"],
+    "run": {
+      "floor": 16,
+      "gold": 55,
+      "current_hp": 70,
+      "max_hp": 70,
+      "deck": [],
+      "potions": [
+        {
+          "index": 0,
+          "potion_id": "FIRE_POTION",
+          "name": "火焰药水",
+          "occupied": true,
+          "can_discard": true
+        }
+      ]
+    },
+    "rest": {
+      "options": []
+    }
+  }
+}

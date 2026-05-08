@@ -87,6 +87,15 @@ def test_filter_state_does_not_show_rest_fallback_options_after_rest_choice() ->
     assert "rest" not in view
 
 
+def test_filter_state_shows_rest_recovery_when_only_potion_action_exists() -> None:
+    state = GameState.model_validate(json.loads(Path("tests/fixtures/state_rest_potion_only.json").read_text())["data"])
+
+    view = filter_state(state)
+
+    assert view["available_actions"] == ["discard_potion"]
+    assert view["rest"]["options"][0]["source"] == "fallback"
+
+
 def test_filter_state_extracts_reward_rows() -> None:
     state = GameState.model_validate(json.loads(Path("tests/fixtures/state_reward_rows.json").read_text())["data"])
 

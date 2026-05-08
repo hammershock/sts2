@@ -149,6 +149,17 @@ def test_cli_state_does_not_render_rest_fallback_options_after_choice() -> None:
 
 
 @respx.mock
+def test_cli_state_renders_rest_recovery_when_only_potion_action_exists() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_rest_potion_only")))
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert "Recovery options:" in result.stdout
+    assert "Legal actions:\n[0] discard_potion(option_index=0)" in result.stdout
+
+
+@respx.mock
 def test_cli_state_renders_reward_rows_and_unloaded_card_note() -> None:
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_reward_rows")))
 
@@ -519,6 +530,26 @@ def test_cli_debug_recover_rest_dry_run(monkeypatch) -> None:
     assert click_calls[0]["args"] == (0.04, 0.145)
     assert click_calls[0]["kwargs"]["normalized"] is True
     assert click_calls[0]["kwargs"]["dry_run"] is True
+
+
+@respx.mock
+def test_cli_debug_recover_rest_allows_potion_only_rest_state(monkeypatch) -> None:
+    monkeypatch.setattr(sys, "platform", "darwin")
+    import sts2_bridge.macos_screenshot as macos_screenshot
+
+    monkeypatch.setattr(
+        macos_screenshot,
+        "click_window",
+        lambda *args, **kwargs: {"clicked": False, "dry_run": True, "screen_point": {"x": 101, "y": 202}},
+    )
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_rest_potion_only")))
+
+    result = runner.invoke(app, ["debug", "recover-rest", "--base-url", BASE_URL, "--dry-run"])
+
+    assert result.exit_code == 0
+    payload = yaml.safe_load(result.stdout)
+    assert payload["before"]["available_actions"] == ["discard_potion"]
+    assert payload["before"]["has_recovery_options"] is True
 
 
 def test_interactive_digit_chooses_map_option() -> None:

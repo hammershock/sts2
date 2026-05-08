@@ -18,7 +18,7 @@ def effective_rest_options(state: GameState) -> list[dict[str, Any]]:
     options = _raw_rest_options(state)
     if options:
         return options
-    if state.screen != "REST" or (state.available_actions and "choose_rest_option" not in state.available_actions):
+    if state.screen != "REST" or _has_rest_progress_action(state.available_actions):
         return []
     return [
         {
@@ -59,3 +59,7 @@ def _raw_rest_options(state: GameState) -> list[dict[str, Any]]:
                 }
             )
     return result
+
+
+def _has_rest_progress_action(actions: list[str]) -> bool:
+    return any(action in {"choose_rest_option", "proceed", "confirm_selection"} for action in actions)

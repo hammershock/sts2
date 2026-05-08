@@ -311,13 +311,6 @@ def recover_rest_command(
                 details=_recovery_state_summary(before),
                 retryable=False,
             )
-        if not force and actions:
-            raise BridgeError(
-                "invalid_recovery_state",
-                "REST recovery is only for REST states with no executable API actions.",
-                details=_recovery_state_summary(before),
-                retryable=False,
-            )
         if not force and not recovery:
             raise BridgeError(
                 "invalid_recovery_state",
