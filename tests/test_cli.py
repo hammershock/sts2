@@ -375,6 +375,7 @@ def test_cli_help_groups_debug_commands_and_removes_combat() -> None:
     assert "health" in debug_result.stdout
     assert "windows" in debug_result.stdout
     assert "window-status" in debug_result.stdout
+    assert "click-window" in debug_result.stdout
 
 
 def test_cli_without_args_prints_help_without_tty(isolated_logs) -> None:

@@ -108,6 +108,7 @@ Window and screenshot debugging:
 sts2 state --with-window
 sts2 debug window-status
 sts2 debug windows
+sts2 debug click-window 0.5 0.4 --normalized --dry-run
 sts2 screenshot
 sts2 screenshot --activate-fallback
 ```
@@ -143,7 +144,7 @@ Re-read `sts2 state` before acting, because the user may have played manually.
   - combat ended
 - Background game windows can update slowly. Poll conservatively and cap retries.
 - Full raw output is very expensive. Prefer compact summaries and omit deck/map internals unless directly needed.
-- Screenshot is only a debugging fallback. The structured mod state should be primary.
+- Screenshot and click fallback are only debugging/recovery tools. The structured mod state should be primary.
 
 ## Implemented Filter Layer
 
@@ -177,6 +178,10 @@ Re-read `sts2 state` before acting, because the user may have played manually.
    - `logs/cli/YYYYMMDD.jsonl` records normal CLI calls, parsed params, return code, and full CLI output.
    - `logs/http/YYYYMMDD.jsonl` records raw HTTP method, URL, request body, headers, status, response headers, response text, timing, and transport errors.
    - Help-only invocations and non-TTY no-arg help output are filtered out and not logged.
+
+6. macOS recovery tools:
+   - `sts2 debug window-status` and `sts2 screenshot` return normalized YAML-safe primitives, including PyObjC string values.
+   - `sts2 debug click-window X Y` clicks inside the selected STS2 window as a last-resort UI fallback. Use `--normalized` for 0..1 window-relative coordinates and `--dry-run` before real clicks.
 
 ## Next Harness Improvements
 

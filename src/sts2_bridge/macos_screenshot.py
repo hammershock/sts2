@@ -203,6 +203,84 @@ def capture_window(
     }
 
 
+def click_window(
+    x: float,
+    y: float,
+    *,
+    owner: str = DEFAULT_OWNER,
+    window_id: int | None = None,
+    normalized: bool = False,
+    activate: bool = True,
+    restore: bool = True,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    windows = list_windows(owner)
+    window = _find_window(windows, window_id) if window_id is not None else select_game_window(windows)
+    screen_x, screen_y = window_click_coordinates(window, x, y, normalized=normalized)
+
+    active_app_before = _frontmost_app()
+    should_activate = activate and not dry_run
+    if should_activate:
+        _activate_app(owner)
+        time.sleep(0.2)
+
+    if not dry_run:
+        _post_left_click(screen_x, screen_y)
+
+    if should_activate and restore and active_app_before and active_app_before != owner:
+        time.sleep(0.1)
+        _activate_app(active_app_before)
+
+    return {
+        "clicked": not dry_run,
+        "dry_run": dry_run,
+        "owner": owner,
+        "window": window.to_dict(),
+        "input": {"x": x, "y": y, "normalized": normalized},
+        "screen_point": {"x": screen_x, "y": screen_y},
+        "activate": activate,
+        "activated": should_activate,
+        "restore": restore,
+        "active_app_before": active_app_before,
+    }
+
+
+def window_click_coordinates(
+    window: WindowInfo,
+    x: float,
+    y: float,
+    *,
+    normalized: bool = False,
+) -> tuple[int, int]:
+    if normalized:
+        if not (0 <= x <= 1 and 0 <= y <= 1):
+            raise BridgeError(
+                "invalid_click_coordinates",
+                "Normalized click coordinates must be between 0 and 1.",
+                details={"x": x, "y": y},
+                retryable=False,
+            )
+        relative_x = round(x * window.width)
+        relative_y = round(y * window.height)
+    else:
+        relative_x = round(x)
+        relative_y = round(y)
+
+    if relative_x < 0 or relative_y < 0 or relative_x > window.width or relative_y > window.height:
+        raise BridgeError(
+            "invalid_click_coordinates",
+            "Click coordinates are outside the selected window bounds.",
+            details={
+                "x": x,
+                "y": y,
+                "normalized": normalized,
+                "window": window.to_dict(),
+            },
+            retryable=False,
+        )
+    return window.x + relative_x, window.y + relative_y
+
+
 def default_output_path() -> Path:
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     return Path("debug") / "screenshots" / f"sts2-{timestamp}.png"
@@ -300,3 +378,29 @@ def _activate_app(app_name: str) -> None:
         capture_output=True,
         check=False,
     )
+
+
+def _post_left_click(x: int, y: int) -> None:
+    try:
+        import Quartz  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise BridgeError(
+            "missing_quartz",
+            "pyobjc-framework-Quartz is required for macOS click fallback.",
+            retryable=False,
+        ) from exc
+
+    point = Quartz.CGPointMake(x, y)
+    move = Quartz.CGEventCreateMouseEvent(None, Quartz.kCGEventMouseMoved, point, Quartz.kCGMouseButtonLeft)
+    down = Quartz.CGEventCreateMouseEvent(None, Quartz.kCGEventLeftMouseDown, point, Quartz.kCGMouseButtonLeft)
+    up = Quartz.CGEventCreateMouseEvent(None, Quartz.kCGEventLeftMouseUp, point, Quartz.kCGMouseButtonLeft)
+    if move is None or down is None or up is None:
+        raise BridgeError(
+            "click_failed",
+            "macOS failed to create a mouse click event. Check Accessibility permission for the terminal app.",
+            retryable=True,
+        )
+    Quartz.CGEventPost(Quartz.kCGHIDEventTap, move)
+    Quartz.CGEventPost(Quartz.kCGHIDEventTap, down)
+    time.sleep(0.05)
+    Quartz.CGEventPost(Quartz.kCGHIDEventTap, up)

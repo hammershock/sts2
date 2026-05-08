@@ -42,7 +42,11 @@ Use debug commands only when the game/API seems unavailable:
 ```bash
 sts2 debug health
 sts2 debug window-status
+sts2 screenshot --activate-fallback
+sts2 debug click-window 0.5 0.4 --normalized --dry-run
 ```
+
+`sts2 debug click-window X Y` is a last-resort UI fallback when HTTP actions are stuck but the visible game is clickable. Coordinates are relative to the STS2 window. Prefer `--normalized` and always run `--dry-run` first; only click when the target is obvious from a screenshot.
 
 ## State Reading
 
@@ -66,6 +70,19 @@ Avoid `--layer raw` unless debugging the bridge. Raw output is large and expensi
 - Shop and potion actions use `option_index`, for example `sts2 act buy_card 4` or `sts2 act use_potion 0`.
 - If a card requires a target and only one valid enemy target is shown, `sts2 act play_card CARD_INDEX` usually works through CLI defaults; explicit `target_index` is also fine.
 - When the game is transitioning, use `sts2 wait --timeout 15` instead of guessing.
+
+## Current Bug Status
+
+The engineering agent has already addressed these feedback items:
+
+- Shop and potion action arguments now consistently use `option_index`; positional shorthand works for `buy_*`, `use_potion`, and `discard_potion`.
+- COMBAT view now includes powers, piles, deck, potions, relic details, card rarity/type, resolved card text, and glossary.
+- CARD_SELECTION view now lists the prompt, selection constraints, indexed candidate cards, and legal actions.
+- REST screens use API actions when available. If the API reports REST with no actions/options, CLI view exposes marked fallback Rest/Smith option indices so the Agent can attempt recovery.
+- macOS `window-status`, screenshot, and YAML output now normalize PyObjC string subclasses and should not dump large tracebacks for ordinary CLI errors.
+- A last-resort `sts2 debug click-window` command exists for visible UI recovery when the HTTP backend is desynced.
+
+Known limitation: if the HTTP backend rejects both `proceed` and `choose_rest_option` while the visible UI is still clickable, Python CLI cannot force a valid HTTP action. Use screenshot plus `debug click-window` only as a recovery fallback, then re-read `sts2 state`.
 
 ## Interactive Mode
 

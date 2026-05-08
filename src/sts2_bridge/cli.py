@@ -234,6 +234,48 @@ def window_status_command(
     _run_text(command)
 
 
+@debug_app.command("click-window")
+def click_window_command(
+    x: Annotated[float, typer.Argument(help="X coordinate relative to the selected game window.")],
+    y: Annotated[float, typer.Argument(help="Y coordinate relative to the selected game window.")],
+    owner: Annotated[str, typer.Option("--owner", help="macOS window owner name to search for.")] = "Slay the Spire 2",
+    window_id: Annotated[int | None, typer.Option("--window-id", help="Click a specific macOS window id.")] = None,
+    normalized: Annotated[
+        bool,
+        typer.Option("--normalized", help="Treat X and Y as 0..1 fractions of the selected window size."),
+    ] = False,
+    activate: Annotated[
+        bool,
+        typer.Option("--activate/--no-activate", help="Bring the game to the foreground before clicking."),
+    ] = True,
+    restore: Annotated[
+        bool,
+        typer.Option("--restore/--no-restore", help="Restore the previous foreground app after clicking."),
+    ] = True,
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Only report the resolved screen point.")] = False,
+) -> None:
+    """Click a point inside the STS2 window as a last-resort UI fallback."""
+
+    def command() -> str:
+        _require_macos()
+        from sts2_bridge.macos_screenshot import click_window
+
+        return _to_yaml(
+            click_window(
+                x,
+                y,
+                owner=owner,
+                window_id=window_id,
+                normalized=normalized,
+                activate=activate,
+                restore=restore,
+                dry_run=dry_run,
+            )
+        )
+
+    _run_text(command)
+
+
 @app.command()
 def screenshot(
     output: Annotated[
