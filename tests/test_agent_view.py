@@ -22,7 +22,7 @@ def test_agent_view_keeps_decision_fields() -> None:
     assert view["screen"] == "COMBAT"
     assert view["available_actions"] == ["play_card", "end_turn"]
     assert view["combat"]["player"]["energy"] == 3
-    assert view["combat"]["enemies"][0]["intent"] == "attack 6"
+    assert view["combat"]["enemies"][0]["intents"] == "attack 6"
     assert view["combat"]["hand"][0]["text"] == "Deal 8 damage."
     assert view["run"]["gold"] == 99
 

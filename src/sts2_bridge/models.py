@@ -85,9 +85,12 @@ class Intent(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     type: str | None = None
+    intent_type: str | None = None
     damage: int | None = None
     hits: int | None = None
     amount: int | None = None
+    total_damage: int | None = None
+    label: str | None = None
     description: str | None = None
 
 

@@ -33,7 +33,7 @@ fields:
             block: block
             is_alive: is_alive
             is_hittable: is_hittable
-            intent:
+            intents:
               transform: intent_summary
             powers:
               list: powers

@@ -28,3 +28,12 @@ def test_filter_state_extracts_chinese_card_numbers_on_real_sample() -> None:
 
     assert any(card.get("damage") for card in playable)
     assert any(card.get("block") for card in playable)
+
+
+def test_filter_state_extracts_multi_intents_on_real_sample() -> None:
+    state = GameState.model_validate(sample("state/*combat_after_end_turn.json")["data"])
+
+    view = filter_state(state)
+
+    assert view["combat"]["incoming_damage"] == 6
+    assert view["combat"]["enemies"][0]["intents"] == "attack 6, defend"

@@ -35,7 +35,9 @@ def test_cli_state_defaults_to_text_view() -> None:
 
     assert result.exit_code == 0
     assert result.stdout.startswith("COMBAT turn=2")
-    assert "Player: HP 63/75" in result.stdout
+    assert "Player: HP 63/75, Block 4, Energy 3, Stars 1" in result.stdout
+    assert "Incoming attack damage: 6" in result.stdout
+    assert "[0] Cultist: HP 24/48, Block 0, Intents attack 6" in result.stdout
     assert "[0] Strike | cost 1 | playable | damage 8 | target enemy[0]" in result.stdout
 
 

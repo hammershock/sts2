@@ -16,16 +16,18 @@ def render_combat_view(data: dict[str, Any]) -> str:
     enemies = combat.get("enemies") or []
     playable = combat.get("playable") or combat.get("playable_cards") or []
 
+    player_parts = [
+        f"HP {_hp(hp)}",
+        f"Block {_value(player.get('block'))}",
+        f"Energy {_value(player.get('energy'))}",
+    ]
+    if player.get("stars"):
+        player_parts.append(f"Stars {player['stars']}")
+
     lines = [
         _header_line(data),
-        (
-            "Player: "
-            f"HP {_hp(hp)}, "
-            f"Block {_value(player.get('block'))}, "
-            f"Energy {_value(player.get('energy'))}, "
-            f"Stars {_value(player.get('stars'))}"
-        ),
-        f"Incoming: {_value(combat.get('incoming_damage'))}",
+        f"Player: {', '.join(player_parts)}",
+        f"Incoming attack damage: {_value(combat.get('incoming_damage'))}",
         "",
     ]
 
@@ -84,7 +86,7 @@ def _enemy_line(enemy: dict[str, Any]) -> str:
         f"[{_value(enemy.get('index'))}] {enemy.get('name') or 'Enemy'}:",
         f"HP {_hp(hp)},",
         f"Block {_value(enemy.get('block'))},",
-        f"Intent {_value(enemy.get('intent'))}",
+        f"Intents {_value(enemy.get('intents') or enemy.get('intent'))}",
     ]
     return " ".join(parts)
 

@@ -36,8 +36,11 @@ def estimate_incoming_damage(state: GameState) -> int:
         if enemy.is_alive is False:
             continue
         for intent in enemy.intents:
-            if (intent.type or "").lower() == "attack" and intent.damage is not None:
-                total += intent.damage * (intent.hits or 1)
+            if _intent_type(intent) == "attack":
+                if intent.total_damage is not None:
+                    total += intent.total_damage
+                elif intent.damage is not None:
+                    total += intent.damage * (intent.hits or 1)
     return total
 
 
@@ -187,12 +190,17 @@ def _intent_summary(enemy: Any) -> str | None:
     for intent in enemy.intents:
         if not isinstance(intent, Intent):
             continue
-        intent_type = (intent.type or "").lower()
+        intent_type = _intent_type(intent)
         if intent_type == "attack" and intent.damage is not None:
-            parts.append(f"attack {intent.damage * (intent.hits or 1)}")
+            damage = intent.total_damage if intent.total_damage is not None else intent.damage * (intent.hits or 1)
+            parts.append(f"attack {damage}")
         elif intent_type:
             parts.append(intent_type)
     return ", ".join(parts) if parts else enemy.move_id or enemy.intent
+
+
+def _intent_type(intent: Intent) -> str:
+    return (intent.type or intent.intent_type or "").lower()
 
 
 def _card_damage(card: Card) -> int:
