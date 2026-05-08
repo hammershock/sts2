@@ -20,11 +20,33 @@ POSITIONAL_ARGUMENTS: dict[str, tuple[str, ...]] = {
 }
 
 
-def parse_action_args(action: str, tokens: list[str], legacy_args: list[str] | None = None) -> dict[str, Any]:
-    parsed: dict[str, Any] = {}
-    _merge_args(parsed, _parse_legacy_args(legacy_args or []))
-    _merge_args(parsed, _parse_tokens(action, tokens))
-    return parsed
+def resolve_action(action_ref: str, available_actions: list[str]) -> str:
+    if action_ref.isdigit():
+        index = int(action_ref)
+        if 0 <= index < len(available_actions):
+            return available_actions[index]
+        raise BridgeError(
+            "invalid_action",
+            "Action index is outside the current available action list.",
+            details={"action": action_ref, "available_actions": _indexed_actions(available_actions)},
+            retryable=False,
+        )
+
+    normalized_ref = _normalize_action_name(action_ref)
+    for action in available_actions:
+        if _normalize_action_name(action) == normalized_ref:
+            return action
+
+    raise BridgeError(
+        "invalid_action",
+        "Action is not available in the current state.",
+        details={"action": action_ref, "available_actions": _indexed_actions(available_actions)},
+        retryable=False,
+    )
+
+
+def parse_action_args(action: str, tokens: list[str]) -> dict[str, Any]:
+    return _parse_tokens(action, tokens)
 
 
 def _parse_tokens(action: str, tokens: list[str]) -> dict[str, Any]:
@@ -73,7 +95,9 @@ def _parse_keyword(tokens: list[str], index: int) -> tuple[str, Any, int]:
         key, raw_value = raw.split("=", 1)
         if not key:
             raise BridgeError("invalid_cli_arg", "Action argument name cannot be empty.", details={"arg": token})
-        return key.replace("-", "_"), _parse_value(raw_value), index + 1
+        key = key.replace("-", "_")
+        _reject_legacy_arg(key)
+        return key, _parse_value(raw_value), index + 1
 
     if index + 1 >= len(tokens) or tokens[index + 1].startswith("--"):
         raise BridgeError(
@@ -82,29 +106,9 @@ def _parse_keyword(tokens: list[str], index: int) -> tuple[str, Any, int]:
             details={"arg": token},
             retryable=False,
         )
-    return raw.replace("-", "_"), _parse_value(tokens[index + 1]), index + 2
-
-
-def _parse_legacy_args(items: list[str]) -> dict[str, Any]:
-    parsed: dict[str, Any] = {}
-    for item in items:
-        if "=" not in item:
-            raise BridgeError(
-                "invalid_cli_arg",
-                "Action arguments must use key=value form.",
-                details={"arg": item},
-                retryable=False,
-            )
-        key, raw_value = item.split("=", 1)
-        if not key:
-            raise BridgeError("invalid_cli_arg", "Action argument key cannot be empty.", details={"arg": item})
-        _set_arg(parsed, key, _parse_value(raw_value))
-    return parsed
-
-
-def _merge_args(target: dict[str, Any], source: dict[str, Any]) -> None:
-    for key, value in source.items():
-        _set_arg(target, key, value)
+    key = raw.replace("-", "_")
+    _reject_legacy_arg(key)
+    return key, _parse_value(tokens[index + 1]), index + 2
 
 
 def _set_arg(parsed: dict[str, Any], key: str, value: Any) -> None:
@@ -122,6 +126,23 @@ def _positional_names(action: str) -> tuple[str, ...]:
     if action.startswith("buy_"):
         return ("index",)
     return POSITIONAL_ARGUMENTS.get(action, ())
+
+
+def _normalize_action_name(action: str) -> str:
+    return action.replace("_", "").replace("-", "").lower()
+
+
+def _indexed_actions(actions: list[str]) -> list[dict[str, Any]]:
+    return [{"index": index, "action": action} for index, action in enumerate(actions)]
+
+
+def _reject_legacy_arg(key: str) -> None:
+    if key == "arg":
+        raise BridgeError(
+            "invalid_cli_arg",
+            "The legacy --arg key=value syntax is no longer supported. Use positional args or --field value.",
+            retryable=False,
+        )
 
 
 def _parse_value(raw_value: str) -> Any:

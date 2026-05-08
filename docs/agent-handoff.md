@@ -64,7 +64,7 @@ Important argument names discovered by real play:
 - `collect_rewards_and_proceed`: no args
 - `end_turn`: no args
 
-The preferred action syntax is `sts2 act ACTION [positional_args...] [--field value ...]`. Positional args are mapped by action, for example `play_card 0 0` means `card_index=0,target_index=0`. The legacy `--arg key=value` form remains available.
+The preferred action syntax is `sts2 act ACTION_OR_INDEX [positional_args...] [--field value ...]`. The first argument can be a canonical action name, an alias without separators such as `playcard`, or a numbered action from the current `Legal actions` list. Positional args are mapped by action, for example `play_card 0 0` means `card_index=0,target_index=0`.
 
 When an invalid arg name is used, the mod often returns a useful message such as `requires option_index`.
 
@@ -89,11 +89,11 @@ Execute actions:
 sts2 act play_card 0
 sts2 act play_card 0 0
 sts2 act play_card 0 --target_index 0
+sts2 act playcard --card_index 0
+sts2 act 1 --card_index 0
 sts2 act play_card --card_index 0 --target_index 0
-sts2 act play_card --arg card_index=0 --arg target_index=1 --pretty
-sts2 act play_card --arg card_index=0 --arg target_index=1 --raw-result --pretty
 sts2 act end_turn --pretty
-sts2 act choose_map_node --arg option_index=0 --pretty
+sts2 act choose_map_node 0 --pretty
 ```
 
 Window and screenshot debugging:
@@ -120,7 +120,7 @@ As of the last manual play session:
 - Next map action: one available Monster node, likely:
 
 ```bash
-sts2 act choose_map_node --arg option_index=0 --pretty
+sts2 act choose_map_node 0 --pretty
 ```
 
 Re-read `sts2 state` before acting, because the user may have played manually.

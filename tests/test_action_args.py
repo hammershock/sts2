@@ -1,6 +1,7 @@
 import pytest
 
 from sts2_bridge.action_args import parse_action_args
+from sts2_bridge.action_args import resolve_action
 from sts2_bridge.models import BridgeError
 
 
@@ -21,15 +22,24 @@ def test_parse_action_args_supports_mixed_positional_and_keyword_values() -> Non
     assert parse_action_args("play_card", ["0", "--target_index", "1"]) == {"card_index": 0, "target_index": 1}
 
 
-def test_parse_action_args_keeps_legacy_key_value_args() -> None:
-    assert parse_action_args("play_card", [], ["card_index=0", "target_index=1"]) == {
-        "card_index": 0,
-        "target_index": 1,
-    }
-
-
 def test_parse_action_args_rejects_duplicate_args() -> None:
     with pytest.raises(BridgeError) as exc_info:
         parse_action_args("play_card", ["0", "--card_index", "1"])
 
     assert exc_info.value.code == "invalid_cli_arg"
+
+
+def test_parse_action_args_rejects_legacy_arg_option() -> None:
+    with pytest.raises(BridgeError) as exc_info:
+        parse_action_args("play_card", ["--arg", "card_index=0"])
+
+    assert exc_info.value.code == "invalid_cli_arg"
+
+
+def test_resolve_action_supports_index_and_alias() -> None:
+    available = ["end_turn", "play_card"]
+
+    assert resolve_action("0", available) == "end_turn"
+    assert resolve_action("1", available) == "play_card"
+    assert resolve_action("playcard", available) == "play_card"
+    assert resolve_action("play-card", available) == "play_card"

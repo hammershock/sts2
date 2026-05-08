@@ -46,11 +46,8 @@ def render_combat_view(data: dict[str, Any]) -> str:
     actions = data.get("available_actions") or []
     if actions:
         lines.append("Legal actions:")
-        for action in actions:
-            if action == "play_card":
-                lines.append("- play_card(card_index, optional target_index)")
-            else:
-                lines.append(f"- {action}")
+        for index, action in enumerate(actions):
+            lines.append(f"[{index}] {_action_signature(action, data)}")
 
     return "\n".join(lines).rstrip() + "\n"
 
@@ -64,8 +61,8 @@ def render_generic_view(data: dict[str, Any]) -> str:
     actions = data.get("available_actions") or []
     if actions:
         lines.extend(["", "Legal actions:"])
-        for action in actions:
-            lines.append(f"- {action}")
+        for index, action in enumerate(actions):
+            lines.append(f"[{index}] {_action_signature(action, data)}")
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -109,6 +106,38 @@ def _card_line(card: dict[str, Any]) -> str:
         target = ", ".join(target_ids) if target_ids else "enemy"
     traits.append(f"target {target}")
     return " | ".join(traits)
+
+
+def _action_signature(action: str, data: dict[str, Any]) -> str:
+    if action == "play_card":
+        default_target = _default_target_index(data)
+        if default_target is None:
+            return "play_card(card_index)"
+        return f"play_card(card_index, target_index={default_target})"
+    if action in {
+        "choose_map_node",
+        "claim_reward",
+        "choose_event_option",
+        "choose_rest_option",
+        "choose_reward_card",
+        "select_character",
+        "select_deck_card",
+    }:
+        return f"{action}(option_index=0)"
+    if action.startswith("buy_"):
+        return f"{action}(index)"
+    return action
+
+
+def _default_target_index(data: dict[str, Any]) -> int | None:
+    combat = data.get("combat") or {}
+    playable = combat.get("playable") or combat.get("playable_cards") or []
+    for card in playable:
+        for target in card.get("valid_targets") or []:
+            target_index = target.get("target_index")
+            if target_index is not None:
+                return target_index
+    return None
 
 
 def _hp(hp: dict[str, Any]) -> str:

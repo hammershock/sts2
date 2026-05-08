@@ -39,6 +39,8 @@ def test_cli_state_defaults_to_text_view() -> None:
     assert "Incoming attack damage: 6" in result.stdout
     assert "[0] Cultist: HP 24/48, Block 0, Intents attack 6" in result.stdout
     assert "[0] Strike | cost 1 | playable | damage 8 | target enemy[0]" in result.stdout
+    assert "[0] play_card(card_index, target_index=0)" in result.stdout
+    assert "[1] end_turn" in result.stdout
 
 
 @respx.mock
@@ -54,7 +56,18 @@ def test_cli_state_filtered_layer_outputs_json() -> None:
 
 
 @respx.mock
-def test_cli_act_parses_repeated_args() -> None:
+def test_cli_act_rejects_legacy_arg_option() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_combat")))
+
+    result = runner.invoke(app, ["act", "play_card", "--arg", "card_index=0", "--base-url", BASE_URL])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "invalid_cli_arg"
+
+
+@respx.mock
+def test_cli_act_parses_action_alias_and_keyword_args() -> None:
     route = respx.post(f"{BASE_URL}/action").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
     )
@@ -84,11 +97,11 @@ def test_cli_act_parses_repeated_args() -> None:
         app,
         [
             "act",
-            "play_card",
-            "--arg",
-            "card_index=0",
-            "--arg",
-            "target_index=1",
+            "playcard",
+            "--card_index",
+            "0",
+            "--target_index",
+            "1",
             "--base-url",
             BASE_URL,
         ],
@@ -108,7 +121,15 @@ def test_cli_act_parses_positional_action_args() -> None:
     respx.get(f"{BASE_URL}/state").mock(
         return_value=httpx.Response(
             200,
-            json={"ok": True, "data": {"screen": "COMBAT", "in_combat": True, "combat": {"hand": [], "enemies": []}}},
+            json={
+                "ok": True,
+                "data": {
+                    "screen": "COMBAT",
+                    "in_combat": True,
+                    "available_actions": ["play_card", "end_turn"],
+                    "combat": {"hand": [], "enemies": []},
+                },
+            },
         )
     )
 
@@ -119,18 +140,26 @@ def test_cli_act_parses_positional_action_args() -> None:
 
 
 @respx.mock
-def test_cli_act_parses_keyword_action_args() -> None:
+def test_cli_act_parses_numbered_action_and_keyword_args() -> None:
     route = respx.post(f"{BASE_URL}/action").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
     )
     respx.get(f"{BASE_URL}/state").mock(
         return_value=httpx.Response(
             200,
-            json={"ok": True, "data": {"screen": "COMBAT", "in_combat": True, "combat": {"hand": [], "enemies": []}}},
+            json={
+                "ok": True,
+                "data": {
+                    "screen": "COMBAT",
+                    "in_combat": True,
+                    "available_actions": ["end_turn", "play_card"],
+                    "combat": {"hand": [], "enemies": []},
+                },
+            },
         )
     )
 
-    result = runner.invoke(app, ["act", "play_card", "--card_index", "0", "--target_index", "1", "--base-url", BASE_URL])
+    result = runner.invoke(app, ["act", "1", "--card_index", "0", "--target_index", "1", "--base-url", BASE_URL])
 
     assert result.exit_code == 0
     assert json.loads(route.calls.last.request.content) == {"action": "play_card", "card_index": 0, "target_index": 1}

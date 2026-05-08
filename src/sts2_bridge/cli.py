@@ -10,7 +10,7 @@ from typing import Annotated, Any
 import typer
 from pydantic import BaseModel
 
-from sts2_bridge.action_args import parse_action_args
+from sts2_bridge.action_args import parse_action_args, resolve_action
 from sts2_bridge.agent_view import (
     build_action_result_view,
     build_actions_view,
@@ -117,11 +117,7 @@ def combat(
 @app.command(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
 def act(
     ctx: typer.Context,
-    action: Annotated[str, typer.Argument(help="Action name from available_actions.")],
-    arg: Annotated[
-        list[str] | None,
-        typer.Option("--arg", help="Legacy action argument in key=value form. Repeat for multiple arguments."),
-    ] = None,
+    action: Annotated[str, typer.Argument(help="Action name, alias, or index from Legal actions.")],
     base_url: BaseUrlOption = None,
     api_timeout: TimeoutOption = 10.0,
     raw_result: Annotated[
@@ -134,15 +130,22 @@ def act(
     client = _client(base_url, api_timeout)
 
     def command() -> dict[str, Any]:
-        args = parse_action_args(action, list(ctx.args), arg)
         before = _try_state(client)
-        result = client.act(action, args)
+        if before is None:
+            raise BridgeError(
+                "state_unavailable",
+                "Cannot resolve action name or index because current state is unavailable.",
+                retryable=True,
+            )
+        resolved_action = resolve_action(action, before.available_actions)
+        args = parse_action_args(resolved_action, list(ctx.args))
+        result = client.act(resolved_action, args)
         after = result.state if isinstance(result.state, GameState) else _try_state(client)
         if not raw_result:
             return {
                 "ok": True,
                 "data": build_action_result_view(
-                    action=action,
+                    action=resolved_action,
                     args=args,
                     status=result.status,
                     before=before,
