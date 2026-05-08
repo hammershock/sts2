@@ -63,3 +63,25 @@ def test_filter_state_extracts_card_selection_options() -> None:
     assert view["selection"]["cards"][0]["option_index"] == 0
     assert view["selection"]["cards"][0]["name"] == "Strike"
     assert view["selection"]["cards"][1]["keywords"] == ["Block"]
+
+
+def test_filter_state_adds_rest_fallback_actions_when_api_omits_options() -> None:
+    state = GameState.model_validate(json.loads(Path("tests/fixtures/state_rest_missing_actions.json").read_text())["data"])
+
+    view = filter_state(state)
+
+    assert view["screen"] == "REST"
+    assert view["available_actions"] == ["choose_rest_option"]
+    assert view["summary"] == "REST screen with 1 legal action(s)."
+    assert view["rest"]["options"][0]["option_index"] == 0
+    assert view["rest"]["options"][0]["source"] == "fallback"
+    assert view["rest"]["options"][1]["label"] == "Smith"
+
+
+def test_filter_state_does_not_show_rest_fallback_options_after_rest_choice() -> None:
+    state = GameState.model_validate(json.loads(Path("tests/fixtures/state_rest_proceed.json").read_text())["data"])
+
+    view = filter_state(state)
+
+    assert view["available_actions"] == ["proceed"]
+    assert "rest" not in view

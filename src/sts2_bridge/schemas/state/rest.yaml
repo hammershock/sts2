@@ -1,0 +1,4 @@
+extends: state/common.yaml
+fields:
+  rest:
+    transform: rest

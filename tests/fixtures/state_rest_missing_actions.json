@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "request_id": "req_test_rest",
+  "data": {
+    "state_version": 9,
+    "run_id": "seed-rest",
+    "screen": "REST",
+    "in_combat": false,
+    "available_actions": [],
+    "run": {
+      "floor": 11,
+      "gold": 147,
+      "current_hp": 47,
+      "max_hp": 70,
+      "deck": []
+    },
+    "rest": {
+      "options": []
+    }
+  }
+}

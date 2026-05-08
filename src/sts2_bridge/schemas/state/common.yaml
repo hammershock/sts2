@@ -4,7 +4,8 @@ fields:
   screen: screen
   in_combat: in_combat
   turn: turn
-  available_actions: available_actions
+  available_actions:
+    transform: available_actions
   floor: run.floor
   gold: run.gold
   relics:

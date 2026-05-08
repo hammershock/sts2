@@ -11,6 +11,8 @@ def render_state_view(data: dict[str, Any]) -> str:
         return render_map_view(data)
     if data.get("screen") == "CARD_SELECTION" and isinstance(data.get("selection"), dict):
         return render_selection_view(data)
+    if data.get("screen") == "REST" and isinstance(data.get("rest"), dict):
+        return render_rest_view(data)
     return render_generic_view(data)
 
 
@@ -172,6 +174,29 @@ def render_selection_view(data: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def render_rest_view(data: dict[str, Any]) -> str:
+    rest = data["rest"]
+    options = rest.get("options") or []
+
+    lines = [_header_line(data)]
+    summary = data.get("summary")
+    if summary:
+        lines.append(f"Summary: {summary}")
+
+    if options:
+        lines.extend(["", "Options:"])
+        for option in options:
+            lines.append(_rest_option_line(option))
+
+    actions = data.get("available_actions") or []
+    if actions:
+        lines.extend(["", "Legal actions:"])
+        for index, action in enumerate(actions):
+            lines.append(f"[{index}] {_action_signature(action, data)}")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _header_line(data: dict[str, Any]) -> str:
     parts = [str(data.get("screen") or "UNKNOWN")]
     if data.get("turn") is not None:
@@ -259,6 +284,19 @@ def _selection_card_line(card: dict[str, Any]) -> str:
     keywords = card.get("keywords") or []
     if keywords:
         traits.append(f"keywords {', '.join(str(keyword) for keyword in keywords)}")
+    return " | ".join(traits)
+
+
+def _rest_option_line(option: dict[str, Any]) -> str:
+    label = option.get("label") or "Option"
+    traits = [f"[{_value(option.get('option_index'))}] {label}"]
+    description = option.get("description")
+    if description:
+        traits.append(_clean_markup(str(description)))
+    if option.get("locked"):
+        traits.append("locked")
+    if option.get("source") == "fallback":
+        traits.append("fallback: API did not expose rest options")
     return " | ".join(traits)
 
 

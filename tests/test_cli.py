@@ -111,6 +111,30 @@ def test_cli_state_renders_card_selection_options() -> None:
 
 
 @respx.mock
+def test_cli_state_renders_rest_fallback_options() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_rest_missing_actions")))
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("REST floor=11 gold=147")
+    assert "[0] Rest | Heal at the rest site. | fallback: API did not expose rest options" in result.stdout
+    assert "[1] Smith | Upgrade one card. | fallback: API did not expose rest options" in result.stdout
+    assert "Legal actions:\n[0] choose_rest_option(option_index=0)" in result.stdout
+
+
+@respx.mock
+def test_cli_state_does_not_render_rest_fallback_options_after_choice() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_rest_proceed")))
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert "Options:" not in result.stdout
+    assert result.stdout.rstrip().endswith("Legal actions:\n[0] proceed")
+
+
+@respx.mock
 def test_cli_act_rejects_legacy_arg_option() -> None:
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_combat")))
 
@@ -245,6 +269,19 @@ def test_cli_act_uses_default_option_index_for_numbered_option_action() -> None:
 
     assert result.exit_code == 0
     assert json.loads(route.calls.last.request.content) == {"action": "choose_map_node", "option_index": 0}
+
+
+@respx.mock
+def test_cli_act_uses_rest_fallback_action_when_api_omits_actions() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
+    )
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_rest_missing_actions")))
+
+    result = runner.invoke(app, ["act", "0", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": "choose_rest_option", "option_index": 0}
 
 
 @respx.mock
@@ -390,6 +427,12 @@ def test_interactive_digit_selects_card_selection_option() -> None:
     state = GameState.model_validate(fixture("state_card_selection")["data"])
 
     assert _interactive_action_from_input("1", state, {}) == ("select_deck_card", {"option_index": 1})
+
+
+def test_interactive_digit_selects_rest_option() -> None:
+    state = GameState.model_validate(fixture("state_rest_missing_actions")["data"])
+
+    assert _interactive_action_from_input("1", state, {}) == ("choose_rest_option", {"option_index": 1})
 
 
 def _read_log_records(root: Path, category: str) -> list[dict]:

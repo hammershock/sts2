@@ -52,6 +52,7 @@ Default `sts2 state` is the Agent view. Prefer it over raw payloads.
 - MAP shows current position, choices, key reachable nodes, and a compact reachable map.
 - COMBAT also includes powers, piles, deck, and potions when the mod exposes them. Prefer this compact view over raw state for tactical decisions.
 - CARD_SELECTION shows the prompt, selection constraints, and indexed candidate cards. Use the shown option index with `select_deck_card`.
+- REST normally shows legal actions from the mod. If it shows fallback Rest/Smith options, the API omitted rest choices; use the displayed option index, then re-read state.
 - Other screens may be less detailed; use legal actions and concise state text first.
 
 Avoid `--layer raw` unless debugging the bridge. Raw output is large and expensive.

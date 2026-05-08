@@ -9,6 +9,7 @@ import yaml
 from pydantic import BaseModel
 
 from sts2_bridge.models import Card, Enemy, GameState, Intent
+from sts2_bridge.state_actions import effective_available_actions, effective_rest_options
 
 
 Schema = dict[str, Any]
@@ -60,6 +61,8 @@ def _state_schema_name(state: GameState, view: str) -> str:
         return "state/reward.yaml"
     if state.screen == "CARD_SELECTION":
         return "state/selection.yaml"
+    if state.screen == "REST":
+        return "state/rest.yaml"
     return "state/common.yaml"
 
 
@@ -119,6 +122,8 @@ def _transform(root: Any, current: Any, rule: Schema, state: Any) -> Any:
     if name == "hp_pair":
         paths = rule.get("paths", [])
         return {"current": _get_path(current, paths[0]), "max": _get_path(current, paths[1])}
+    if name == "available_actions":
+        return effective_available_actions(root) if isinstance(root, GameState) else []
     if name == "card_text":
         return _get_path(current, "resolved_rules_text") or _get_path(current, "rules_text")
     if name == "card_type":
@@ -139,6 +144,8 @@ def _transform(root: Any, current: Any, rule: Schema, state: Any) -> Any:
         return _potions_view(root)
     if name == "selection":
         return _selection_view(root)
+    if name == "rest":
+        return _rest_view(root)
     if name == "incoming_damage":
         if isinstance(root, GameState):
             return estimate_incoming_damage(root)
@@ -349,6 +356,12 @@ def _selection_card_view(root: Any, card: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _rest_view(root: Any) -> dict[str, Any]:
+    if not isinstance(root, GameState):
+        return {}
+    return {"options": effective_rest_options(root)}
+
+
 def _pile_cards(piles: dict[str, Any], name: str) -> list[Any]:
     card_items = piles.get(f"{name}_cards")
     if isinstance(card_items, list) and card_items:
@@ -536,7 +549,7 @@ def _summary(state: GameState) -> str:
             if enemy.is_alive is not False
         ]
         return f"{hp}, incoming {incoming} ({max(0, incoming - block)} after block), {playable} playable; enemies: {', '.join(enemies[:3])}"
-    return f"{state.screen} screen with {len(state.available_actions)} legal action(s)."
+    return f"{state.screen} screen with {len(effective_available_actions(state))} legal action(s)."
 
 
 def _intent_summary(enemy: Any) -> str | None:

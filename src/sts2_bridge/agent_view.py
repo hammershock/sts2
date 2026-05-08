@@ -4,6 +4,7 @@ from typing import Any
 
 from sts2_bridge.filtering import filter_action_result, filter_state
 from sts2_bridge.models import Card, Enemy, GameState
+from sts2_bridge.state_actions import effective_available_actions
 
 
 def build_state_view(state: GameState, view: str = "brief") -> dict[str, Any]:
@@ -55,7 +56,7 @@ def build_actions_view(state: GameState) -> dict[str, Any]:
                 "action": action,
                 "args": _action_args(action),
             }
-            for action in state.available_actions
+            for action in effective_available_actions(state)
         ],
     }
 
@@ -99,8 +100,10 @@ def _state_delta(before: GameState, after: GameState) -> dict[str, Any]:
         if combat_delta:
             delta["combat"] = combat_delta
 
-    if before.available_actions != after.available_actions:
-        delta["available_actions"] = {"from": before.available_actions, "to": after.available_actions}
+    before_actions = effective_available_actions(before)
+    after_actions = effective_available_actions(after)
+    if before_actions != after_actions:
+        delta["available_actions"] = {"from": before_actions, "to": after_actions}
 
     return delta
 

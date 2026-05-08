@@ -21,6 +21,7 @@ from sts2_bridge.agent_view import (
 from sts2_bridge.client import DEFAULT_BASE_URL, Sts2Client
 from sts2_bridge.models import BridgeError, GameState
 from sts2_bridge.rendering import render_state_view
+from sts2_bridge.state_actions import effective_available_actions
 from sts2_bridge.trace import log_cli_call, should_log_cli_call, _now_iso
 
 app = typer.Typer(
@@ -136,7 +137,7 @@ def act(
                 "Cannot resolve action name or index because current state is unavailable.",
                 retryable=True,
             )
-        resolved_action = resolve_action(action, before.available_actions)
+        resolved_action = resolve_action(action, effective_available_actions(before))
         args = parse_action_args(resolved_action, list(ctx.args))
         result = client.act(resolved_action, args)
         after = result.state if isinstance(result.state, GameState) else _try_state(client)
@@ -184,7 +185,7 @@ def wait(
                     raise
                 time.sleep(interval)
                 continue
-            if game_state.available_actions:
+            if effective_available_actions(game_state):
                 return render_state_view(build_state_view(game_state, "brief"))
             time.sleep(interval)
         raise BridgeError(
@@ -347,12 +348,12 @@ def _interactive_action_from_input(
         return _numeric_interactive_action(int(command), state, view)
 
     tokens = command.split()
-    action = resolve_action(tokens[0], state.available_actions)
+    action = resolve_action(tokens[0], effective_available_actions(state))
     return action, parse_action_args(action, tokens[1:])
 
 
 def _default_interactive_action(state: GameState) -> tuple[str, dict[str, Any]] | None:
-    actions = state.available_actions
+    actions = effective_available_actions(state)
     non_card_actions = [action for action in actions if action != "play_card"]
     if len(actions) == 1 and actions[0] != "play_card":
         action = actions[0]
@@ -368,18 +369,21 @@ def _numeric_interactive_action(
     state: GameState,
     view: dict[str, Any],
 ) -> tuple[str, dict[str, Any]]:
-    if state.screen == "MAP" and "choose_map_node" in state.available_actions:
+    actions = effective_available_actions(state)
+    if state.screen == "MAP" and "choose_map_node" in actions:
         return "choose_map_node", {"option_index": index}
-    if state.screen in {"REWARD", "CARD_REWARD"} and "claim_reward" in state.available_actions:
+    if state.screen in {"REWARD", "CARD_REWARD"} and "claim_reward" in actions:
         return "claim_reward", {"option_index": index}
-    if state.screen == "CARD_SELECTION" and "select_deck_card" in state.available_actions:
+    if state.screen == "CARD_SELECTION" and "select_deck_card" in actions:
         return "select_deck_card", {"option_index": index}
-    if state.screen == "COMBAT" and "play_card" in state.available_actions:
+    if state.screen == "REST" and "choose_rest_option" in actions:
+        return "choose_rest_option", {"option_index": index}
+    if state.screen == "COMBAT" and "play_card" in actions:
         card_args = _card_args_from_view(index, view)
         if card_args is not None:
             return "play_card", card_args
 
-    action = resolve_action(str(index), state.available_actions)
+    action = resolve_action(str(index), actions)
     return action, parse_action_args(action, [])
 
 
@@ -400,11 +404,12 @@ def _card_args_from_view(card_index: int, view: dict[str, Any]) -> dict[str, Any
 
 
 def _action_if_available(state: GameState, action: str, args: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    if action not in state.available_actions:
+    available_actions = effective_available_actions(state)
+    if action not in available_actions:
         raise BridgeError(
             "invalid_action",
             f"{action} is not available in the current state.",
-            details={"available_actions": state.available_actions},
+            details={"available_actions": available_actions},
             retryable=False,
         )
     return action, args

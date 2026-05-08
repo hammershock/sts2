@@ -158,6 +158,7 @@ Re-read `sts2 state` before acting, because the user may have played manually.
    - The default COMBAT view includes current relics, player/enemy powers, playable card rarity/type, resolved card rules text, piles, deck, potions, and the current glossary exposed by the mod.
    - The default MAP view includes current position, indexed path choices, key reachable elite/rest/shop/treasure nodes, and a compact row-by-row reachable map.
    - The default CARD_SELECTION view includes the prompt, selection constraints, indexed candidate cards, card rarity/type/cost/rules text, and legal actions.
+   - REST screens use API-provided actions when available. If the mod reports no actions/options while the screen is REST, the CLI adds a marked fallback for standard Rest and Smith option indices so Agents do not get stuck on an empty legal-action list.
    - `--view decision`, `--view combat`, and `--view agent` expose progressively richer filtered views.
    - `--raw` remains opt-in for parser/debug work.
 
