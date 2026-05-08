@@ -71,8 +71,8 @@ def test_filter_state_adds_rest_fallback_actions_when_api_omits_options() -> Non
     view = filter_state(state)
 
     assert view["screen"] == "REST"
-    assert view["available_actions"] == ["choose_rest_option"]
-    assert view["summary"] == "REST screen with 1 legal action(s)."
+    assert view.get("available_actions", []) == []
+    assert view["summary"] == "REST screen with 0 legal action(s)."
     assert view["rest"]["options"][0]["option_index"] == 0
     assert view["rest"]["options"][0]["source"] == "fallback"
     assert view["rest"]["options"][1]["label"] == "Smith"

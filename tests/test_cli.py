@@ -2,13 +2,14 @@ import json
 from pathlib import Path
 
 import httpx
+import pytest
 import respx
 import yaml
 from typer.testing import CliRunner
 
 from sts2_bridge.cli import app, _interactive_action_from_input, _to_yaml
 from sts2_bridge.filtering import filter_state
-from sts2_bridge.models import GameState
+from sts2_bridge.models import BridgeError, GameState
 
 BASE_URL = "http://test.local"
 runner = CliRunner()
@@ -118,9 +119,21 @@ def test_cli_state_renders_rest_fallback_options() -> None:
 
     assert result.exit_code == 0
     assert result.stdout.startswith("REST floor=11 gold=147")
-    assert "[0] Rest | Heal at the rest site. | fallback: API did not expose rest options" in result.stdout
-    assert "[1] Smith | Upgrade one card. | fallback: API did not expose rest options" in result.stdout
-    assert "Legal actions:\n[0] choose_rest_option(option_index=0)" in result.stdout
+    assert "Recovery options:" in result.stdout
+    assert "[0] Rest | Heal at the rest site. | recovery: API did not expose executable rest actions" in result.stdout
+    assert "[1] Smith | Upgrade one card. | recovery: API did not expose executable rest actions" in result.stdout
+    assert "Legal actions:" not in result.stdout
+
+
+@respx.mock
+def test_cli_wait_returns_rest_recovery_state_when_api_omits_actions() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_rest_missing_actions")))
+
+    result = runner.invoke(app, ["wait", "--base-url", BASE_URL, "--timeout", "0.01"])
+
+    assert result.exit_code == 0
+    assert "Recovery options:" in result.stdout
+    assert "Legal actions:" not in result.stdout
 
 
 @respx.mock
@@ -272,7 +285,7 @@ def test_cli_act_uses_default_option_index_for_numbered_option_action() -> None:
 
 
 @respx.mock
-def test_cli_act_uses_rest_fallback_action_when_api_omits_actions() -> None:
+def test_cli_act_rejects_rest_fallback_action_when_api_omits_actions() -> None:
     route = respx.post(f"{BASE_URL}/action").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
     )
@@ -280,8 +293,9 @@ def test_cli_act_uses_rest_fallback_action_when_api_omits_actions() -> None:
 
     result = runner.invoke(app, ["act", "0", "--base-url", BASE_URL])
 
-    assert result.exit_code == 0
-    assert json.loads(route.calls.last.request.content) == {"action": "choose_rest_option", "option_index": 0}
+    assert result.exit_code == 1
+    assert "ERROR invalid_action:" in result.stdout
+    assert not route.calls
 
 
 @respx.mock
@@ -440,7 +454,8 @@ def test_interactive_digit_selects_card_selection_option() -> None:
 def test_interactive_digit_selects_rest_option() -> None:
     state = GameState.model_validate(fixture("state_rest_missing_actions")["data"])
 
-    assert _interactive_action_from_input("1", state, {}) == ("choose_rest_option", {"option_index": 1})
+    with pytest.raises(BridgeError):
+        _interactive_action_from_input("1", state, {})
 
 
 def _read_log_records(root: Path, category: str) -> list[dict]:

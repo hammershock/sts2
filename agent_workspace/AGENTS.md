@@ -56,7 +56,7 @@ Default `sts2 state` is the Agent view. Prefer it over raw payloads.
 - MAP shows current position, choices, key reachable nodes, and a compact reachable map.
 - COMBAT also includes powers, piles, deck, and potions when the mod exposes them. Prefer this compact view over raw state for tactical decisions.
 - CARD_SELECTION shows the prompt, selection constraints, and indexed candidate cards. Use the shown option index with `select_deck_card`.
-- REST normally shows legal actions from the mod. If it shows fallback Rest/Smith options, the API omitted rest choices; use the displayed option index, then re-read state.
+- REST normally shows legal actions from the mod. If it shows Recovery options, the API omitted executable rest actions; do not run `sts2 act` for those options. Use screenshot plus `debug click-window` only when recovery is necessary.
 - Other screens may be less detailed; use legal actions and concise state text first.
 
 Avoid `--layer raw` unless debugging the bridge. Raw output is large and expensive.
@@ -78,7 +78,7 @@ The engineering agent has already addressed these feedback items:
 - Shop and potion action arguments now consistently use `option_index`; positional shorthand works for `buy_*`, `use_potion`, and `discard_potion`.
 - COMBAT view now includes powers, piles, deck, potions, relic details, card rarity/type, resolved card text, and glossary.
 - CARD_SELECTION view now lists the prompt, selection constraints, indexed candidate cards, and legal actions.
-- REST screens use API actions when available. If the API reports REST with no actions/options, CLI view exposes marked fallback Rest/Smith option indices so the Agent can attempt recovery.
+- REST screens use API actions when available. If the API reports REST with no actions/options, CLI view exposes marked Recovery options, not Legal actions, so the Agent does not call backend-rejected fallback actions by mistake.
 - macOS `window-status`, screenshot, and YAML output now normalize PyObjC string subclasses and should not dump large tracebacks for ordinary CLI errors.
 - A last-resort `sts2 debug click-window` command exists for visible UI recovery when the HTTP backend is desynced.
 

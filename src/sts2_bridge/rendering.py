@@ -184,7 +184,8 @@ def render_rest_view(data: dict[str, Any]) -> str:
         lines.append(f"Summary: {summary}")
 
     if options:
-        lines.extend(["", "Options:"])
+        heading = "Recovery options:" if _has_fallback_options(options) else "Options:"
+        lines.extend(["", heading])
         for option in options:
             lines.append(_rest_option_line(option))
 
@@ -296,8 +297,12 @@ def _rest_option_line(option: dict[str, Any]) -> str:
     if option.get("locked"):
         traits.append("locked")
     if option.get("source") == "fallback":
-        traits.append("fallback: API did not expose rest options")
+        traits.append("recovery: API did not expose executable rest actions")
     return " | ".join(traits)
+
+
+def _has_fallback_options(options: list[Any]) -> bool:
+    return any(isinstance(option, dict) and option.get("source") == "fallback" for option in options)
 
 
 def _relic_line(relic: dict[str, Any]) -> str:

@@ -21,7 +21,7 @@ from sts2_bridge.agent_view import (
 from sts2_bridge.client import DEFAULT_BASE_URL, Sts2Client
 from sts2_bridge.models import BridgeError, GameState
 from sts2_bridge.rendering import render_state_view
-from sts2_bridge.state_actions import effective_available_actions
+from sts2_bridge.state_actions import effective_available_actions, has_recovery_options
 from sts2_bridge.trace import log_cli_call, should_log_cli_call, _now_iso
 
 app = typer.Typer(
@@ -185,7 +185,7 @@ def wait(
                     raise
                 time.sleep(interval)
                 continue
-            if effective_available_actions(game_state):
+            if effective_available_actions(game_state) or has_recovery_options(game_state):
                 return render_state_view(build_state_view(game_state, "brief"))
             time.sleep(interval)
         raise BridgeError(

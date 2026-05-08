@@ -7,11 +7,11 @@ from sts2_bridge.models import GameState
 
 def effective_available_actions(state: GameState) -> list[str]:
     """Return actions the CLI should expose for the current state."""
-    if state.available_actions:
-        return list(state.available_actions)
-    if state.screen == "REST":
-        return ["choose_rest_option"]
-    return []
+    return list(state.available_actions)
+
+
+def has_recovery_options(state: GameState) -> bool:
+    return any(option.get("source") == "fallback" for option in effective_rest_options(state))
 
 
 def effective_rest_options(state: GameState) -> list[dict[str, Any]]:
