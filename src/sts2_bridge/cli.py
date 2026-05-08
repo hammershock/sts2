@@ -10,6 +10,7 @@ from typing import Annotated, Any
 import typer
 from pydantic import BaseModel
 
+from sts2_bridge.action_args import parse_action_args
 from sts2_bridge.agent_view import (
     build_action_result_view,
     build_actions_view,
@@ -113,12 +114,13 @@ def combat(
     _run_json(command, pretty)
 
 
-@app.command()
+@app.command(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
 def act(
+    ctx: typer.Context,
     action: Annotated[str, typer.Argument(help="Action name from available_actions.")],
     arg: Annotated[
         list[str] | None,
-        typer.Option("--arg", help="Action argument in key=value form. Repeat for multiple arguments."),
+        typer.Option("--arg", help="Legacy action argument in key=value form. Repeat for multiple arguments."),
     ] = None,
     base_url: BaseUrlOption = None,
     api_timeout: TimeoutOption = 10.0,
@@ -128,11 +130,11 @@ def act(
     ] = False,
     pretty: PrettyOption = False,
 ) -> None:
-    """Execute one game action through the Mod API."""
+    """Execute one game action. Extra tokens after ACTION are parsed as action args."""
     client = _client(base_url, api_timeout)
 
     def command() -> dict[str, Any]:
-        args = _parse_args(arg or [])
+        args = parse_action_args(action, list(ctx.args), arg)
         before = _try_state(client)
         result = client.act(action, args)
         after = result.state if isinstance(result.state, GameState) else _try_state(client)
@@ -309,37 +311,6 @@ def _run_output(command: Any, pretty: bool) -> None:
 
 def _emit(payload: dict[str, Any], pretty: bool) -> None:
     typer.echo(json.dumps(payload, ensure_ascii=False, indent=2 if pretty else None, sort_keys=pretty))
-
-
-def _parse_args(items: list[str]) -> dict[str, Any]:
-    parsed: dict[str, Any] = {}
-    for item in items:
-        if "=" not in item:
-            raise BridgeError(
-                "invalid_cli_arg",
-                "Action arguments must use key=value form.",
-                details={"arg": item},
-                retryable=False,
-            )
-        key, raw_value = item.split("=", 1)
-        if not key:
-            raise BridgeError("invalid_cli_arg", "Action argument key cannot be empty.", details={"arg": item})
-        parsed[key] = _parse_value(raw_value)
-    return parsed
-
-
-def _parse_value(raw_value: str) -> Any:
-    lowered = raw_value.lower()
-    if lowered == "true":
-        return True
-    if lowered == "false":
-        return False
-    if lowered == "null":
-        return None
-    try:
-        return json.loads(raw_value)
-    except json.JSONDecodeError:
-        return raw_value
 
 
 def _dump_model(value: Any) -> Any:

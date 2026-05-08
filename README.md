@@ -32,6 +32,9 @@ sts2 state --layer raw --pretty
 sts2 state --view decision --layer filtered --pretty
 sts2 actions --pretty
 sts2 combat --pretty
+sts2 act play_card 0
+sts2 act play_card 0 0
+sts2 act play_card --card_index 0 --target_index 0
 sts2 act play_card --arg card_index=0 --arg target_index=1 --pretty
 sts2 act play_card --arg card_index=0 --arg target_index=1 --raw-result --pretty
 sts2 wait --timeout 30 --pretty
@@ -51,6 +54,8 @@ State output has three layers:
 `sts2 state` defaults to the text `view` layer. Use `--layer filtered` for schema-filtered JSON and `--layer raw` or `--raw` for the full parsed payload. Use `--view decision`, `--view combat`, or `--view agent` to select richer filtered state before rendering or JSON output. Use `--format json` if a caller wants the selected view layer wrapped as JSON.
 
 `sts2 act` defaults to a filtered action result: status, action args, a compact post-action state, and changed fields when a before/after state is available. Use `--raw-result` to inspect the full parsed action result.
+
+Action arguments can be passed either positionally or by keyword. For example, `sts2 act play_card 0 0`, `sts2 act play_card 0 --target_index 0`, and `sts2 act play_card --card_index 0 --target_index 0` all map to the flat Mod API payload fields. The older `--arg key=value` form remains supported.
 
 Filtering rules live in YAML files under `src/sts2_bridge/schemas/`, split by `state/` and `action/`. Real raw HTTP samples live under `samples/http/` and are used as regression fixtures for the filtering layer.
 

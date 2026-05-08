@@ -64,6 +64,8 @@ Important argument names discovered by real play:
 - `collect_rewards_and_proceed`: no args
 - `end_turn`: no args
 
+The preferred action syntax is `sts2 act ACTION [positional_args...] [--field value ...]`. Positional args are mapped by action, for example `play_card 0 0` means `card_index=0,target_index=0`. The legacy `--arg key=value` form remains available.
+
 When an invalid arg name is used, the mod often returns a useful message such as `requires option_index`.
 
 ## Useful CLI Commands
@@ -84,6 +86,10 @@ sts2 wait --timeout 15 --pretty
 Execute actions:
 
 ```bash
+sts2 act play_card 0
+sts2 act play_card 0 0
+sts2 act play_card 0 --target_index 0
+sts2 act play_card --card_index 0 --target_index 0
 sts2 act play_card --arg card_index=0 --arg target_index=1 --pretty
 sts2 act play_card --arg card_index=0 --arg target_index=1 --raw-result --pretty
 sts2 act end_turn --pretty

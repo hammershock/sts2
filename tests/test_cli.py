@@ -100,6 +100,42 @@ def test_cli_act_parses_repeated_args() -> None:
     assert "changes" in json.loads(result.stdout)["data"]
 
 
+@respx.mock
+def test_cli_act_parses_positional_action_args() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
+    )
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(
+            200,
+            json={"ok": True, "data": {"screen": "COMBAT", "in_combat": True, "combat": {"hand": [], "enemies": []}}},
+        )
+    )
+
+    result = runner.invoke(app, ["act", "play_card", "0", "1", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": "play_card", "card_index": 0, "target_index": 1}
+
+
+@respx.mock
+def test_cli_act_parses_keyword_action_args() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
+    )
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(
+            200,
+            json={"ok": True, "data": {"screen": "COMBAT", "in_combat": True, "combat": {"hand": [], "enemies": []}}},
+        )
+    )
+
+    result = runner.invoke(app, ["act", "play_card", "--card_index", "0", "--target_index", "1", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": "play_card", "card_index": 0, "target_index": 1}
+
+
 def test_cli_rejects_invalid_arg_shape() -> None:
     result = runner.invoke(app, ["act", "play_card", "--arg", "card_index"])
 
