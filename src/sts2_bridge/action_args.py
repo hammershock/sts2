@@ -8,8 +8,8 @@ from sts2_bridge.models import BridgeError
 
 POSITIONAL_ARGUMENTS: dict[str, tuple[str, ...]] = {
     "play_card": ("card_index", "target_index"),
-    "use_potion": ("potion_index", "target_index"),
-    "discard_potion": ("potion_index", "target_index"),
+    "use_potion": ("option_index", "target_index"),
+    "discard_potion": ("option_index", "target_index"),
     "choose_map_node": ("option_index",),
     "claim_reward": ("option_index",),
     "choose_event_option": ("option_index",),
@@ -94,7 +94,7 @@ def _parse_tokens(action: str, tokens: list[str]) -> dict[str, Any]:
 
     for key, value in DEFAULT_ARGUMENTS.get(action, {}).items():
         parsed.setdefault(key, value)
-    return parsed
+    return _canonical_args(action, parsed)
 
 
 def _parse_keyword(tokens: list[str], index: int) -> tuple[str, Any, int]:
@@ -136,8 +136,30 @@ def _set_arg(parsed: dict[str, Any], key: str, value: Any) -> None:
 
 def _positional_names(action: str) -> tuple[str, ...]:
     if action.startswith("buy_"):
-        return ("index",)
+        return ("option_index",)
     return POSITIONAL_ARGUMENTS.get(action, ())
+
+
+def _canonical_args(action: str, parsed: dict[str, Any]) -> dict[str, Any]:
+    aliases: dict[str, str] = {}
+    if action in {"use_potion", "discard_potion"}:
+        aliases["potion_index"] = "option_index"
+    if action.startswith("buy_"):
+        aliases["index"] = "option_index"
+
+    canonical = dict(parsed)
+    for alias, target in aliases.items():
+        if alias not in canonical:
+            continue
+        if target in canonical:
+            raise BridgeError(
+                "invalid_cli_arg",
+                "Duplicate action argument.",
+                details={"arg": target, "alias": alias},
+                retryable=False,
+            )
+        canonical[target] = canonical.pop(alias)
+    return canonical
 
 
 def _normalize_action_name(action: str) -> str:

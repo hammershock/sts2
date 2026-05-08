@@ -129,6 +129,12 @@ def _transform(root: Any, current: Any, rule: Schema, state: Any) -> Any:
         return _relics(root)
     if name == "map_view":
         return _map_view(root)
+    if name == "deck":
+        return _deck_view(root)
+    if name == "piles":
+        return _piles_view(root)
+    if name == "potions":
+        return _potions_view(root)
     if name == "incoming_damage":
         if isinstance(root, GameState):
             return estimate_incoming_damage(root)
@@ -258,6 +264,88 @@ def _relics(root: Any) -> list[dict[str, Any]]:
             }
         )
     return relics
+
+
+def _deck_view(root: Any) -> list[str]:
+    deck = _get_path(root, "run.deck")
+    return _card_stack_summary(deck if isinstance(deck, list) else [])
+
+
+def _piles_view(root: Any) -> dict[str, Any]:
+    piles = _get_path(root, "run.piles")
+    result: dict[str, Any] = {}
+    for name in ("draw", "discard", "exhaust"):
+        cards = []
+        if isinstance(piles, dict):
+            cards = _pile_cards(piles, name)
+        summary = _card_stack_summary(cards)
+        count = _get_path(root, f"combat.{name}_pile_count")
+        result[name] = summary if summary else ([] if count is None else {"count": count})
+    return result
+
+
+def _potions_view(root: Any) -> list[dict[str, Any]]:
+    potions = _get_path(root, "run.potions")
+    if not isinstance(potions, list):
+        return []
+
+    result: list[dict[str, Any]] = []
+    for index, potion in enumerate(potions):
+        if not isinstance(potion, dict):
+            continue
+        result.append(
+            {
+                "index": potion.get("index", index),
+                "name": potion.get("name"),
+                "potion_id": potion.get("potion_id"),
+                "occupied": potion.get("occupied"),
+                "can_use": potion.get("can_use"),
+                "can_discard": potion.get("can_discard"),
+                "requires_target": potion.get("requires_target"),
+                "target_type": potion.get("target_type"),
+                "target_index_space": potion.get("target_index_space"),
+                "valid_target_indices": potion.get("valid_target_indices"),
+                "description": potion.get("description") or potion.get("usage"),
+            }
+        )
+    return result
+
+
+def _pile_cards(piles: dict[str, Any], name: str) -> list[Any]:
+    card_items = piles.get(f"{name}_cards")
+    if isinstance(card_items, list) and card_items:
+        return card_items
+    line_items = piles.get(name)
+    if isinstance(line_items, list):
+        return line_items
+    return []
+
+
+def _card_stack_summary(cards: list[Any]) -> list[str]:
+    counts: dict[str, int] = {}
+    order: list[str] = []
+    for card in cards:
+        label = _card_label(card)
+        if not label:
+            continue
+        if label not in counts:
+            order.append(label)
+            counts[label] = 0
+        counts[label] += 1
+    return [label if counts[label] == 1 else f"{label}*{counts[label]}" for label in order]
+
+
+def _card_label(card: Any) -> str | None:
+    if isinstance(card, dict):
+        line = card.get("line")
+        if isinstance(line, str) and line:
+            return line.split("[", 1)[0].strip()
+        name = card.get("name") or card.get("card_id")
+        if not name:
+            return None
+        upgraded = "+" if card.get("upgraded") else ""
+        return f"{name}{upgraded}"
+    return None
 
 
 def _map_view(root: Any) -> dict[str, Any]:

@@ -72,7 +72,8 @@ fields:
         item:
           transform: card_action
       piles:
-        fields:
-          draw: combat.draw_pile_count
-          discard: combat.discard_pile_count
-          exhaust: combat.exhaust_pile_count
+        transform: piles
+  deck:
+    transform: deck
+  potions:
+    transform: potions

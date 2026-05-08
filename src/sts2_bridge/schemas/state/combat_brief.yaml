@@ -10,6 +10,14 @@ fields:
           block: combat.player.block
           energy: combat.player.energy
           stars: combat.player.stars
+          powers:
+            list: combat.player.powers
+            item:
+              fields:
+                name: name
+                power_id: power_id
+                amount: amount
+                is_debuff: is_debuff
       incoming_damage:
         transform: incoming_damage
       enemies:
@@ -24,8 +32,22 @@ fields:
             block: block
             intents:
               transform: intent_summary
+            powers:
+              list: powers
+              item:
+                fields:
+                  name: name
+                  power_id: power_id
+                  amount: amount
+                  is_debuff: is_debuff
       playable:
         list: combat.hand
         where: playable
         item:
           transform: card_action
+      piles:
+        transform: piles
+  deck:
+    transform: deck
+  potions:
+    transform: potions

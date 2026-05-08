@@ -55,11 +55,13 @@ State output has three layers:
 
 `sts2 state` defaults to the text `view` layer. Use `--layer filtered` for schema-filtered text and `--layer raw` or `--raw` for the full parsed payload rendered as text. Use `--view decision`, `--view combat`, or `--view agent` to select richer filtered state before rendering.
 
-The default combat view includes current relics, enemy intents, playable card rarity/type, resolved card rules text, and the glossary entries currently exposed by the mod. The default map view shows current position, indexed choices, key reachable elite/rest/shop/treasure nodes, and a compact row-by-row reachable map.
+The default combat view includes current relics, player/enemy powers, enemy intents, playable card rarity/type, resolved card rules text, piles, deck, potions, and the glossary entries currently exposed by the mod. The default map view shows current position, indexed choices, key reachable elite/rest/shop/treasure nodes, and a compact row-by-row reachable map.
 
 `sts2 act` defaults to a filtered text action result: status, action args, a compact post-action state, and changed fields when a before/after state is available. Use `--raw-result` to inspect the full parsed action result rendered as text.
 
 Action names can be written canonically or as aliases without separators, such as `play_card` or `playcard`. The first action argument can also be the numbered action from the current `Legal actions` list, for example `sts2 act 1 --card_index 0` when `[1] play_card(...)` is shown. Action parameters can be passed positionally or by keyword, such as `sts2 act play_card 0 0`, `sts2 act play_card 0 --target_index 0`, or `sts2 act play_card --card_index 0 --target_index 0`. Actions displayed with `option_index=0`, such as `choose_map_node(option_index=0)`, use that default when no explicit option is passed.
+
+Shop and potion actions use `option_index` at the CLI boundary, matching the mod API. Positional shorthand works, for example `sts2 act buy_card 4` and `sts2 act use_potion 0`.
 
 Filtering rules live in YAML files under `src/sts2_bridge/schemas/`, split by `state/` and `action/`. Real raw HTTP samples live under `samples/http/` and are used as regression fixtures for the filtering layer.
 

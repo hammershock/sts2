@@ -50,6 +50,7 @@ Default `sts2 state` is the Agent view. Prefer it over raw payloads.
 
 - COMBAT shows HP, block, energy, enemies, intents, playable hand, legal actions, relics, and glossary.
 - MAP shows current position, choices, key reachable nodes, and a compact reachable map.
+- COMBAT also includes powers, piles, deck, and potions when the mod exposes them. Prefer this compact view over raw state for tactical decisions.
 - Other screens may be less detailed; use legal actions and concise state text first.
 
 Avoid `--layer raw` unless debugging the bridge. Raw output is large and expensive.
@@ -60,6 +61,7 @@ Avoid `--layer raw` unless debugging the bridge. Raw output is large and expensi
 - Do not chain card actions from stale hand data.
 - Use numbered legal actions when possible.
 - Actions displayed as `option_index=0` can be run without extra args, for example `sts2 act 0`.
+- Shop and potion actions use `option_index`, for example `sts2 act buy_card 4` or `sts2 act use_potion 0`.
 - If a card requires a target and only one valid enemy target is shown, `sts2 act play_card CARD_INDEX` usually works through CLI defaults; explicit `target_index` is also fine.
 - When the game is transitioning, use `sts2 wait --timeout 15` instead of guessing.
 

@@ -68,7 +68,7 @@ def _action_args(action: str) -> list[dict[str, Any]]:
         ]
     if action in {"use_potion", "discard_potion"}:
         return [
-            {"name": "potion_index", "type": "int", "required": True},
+            {"name": "option_index", "type": "int", "required": True},
             {"name": "target_index", "type": "int", "required": "when potion requires target"},
         ]
     if action in {
@@ -82,7 +82,7 @@ def _action_args(action: str) -> list[dict[str, Any]]:
     }:
         return [{"name": "option_index", "type": "int", "required": True}]
     if action.startswith("buy_"):
-        return [{"name": "index", "type": "int", "required": True}]
+        return [{"name": "option_index", "type": "int", "required": True}]
     return []
 
 

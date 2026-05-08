@@ -48,10 +48,14 @@ def test_cli_state_defaults_to_text_view() -> None:
     assert result.exit_code == 0
     assert result.stdout.startswith("COMBAT turn=2")
     assert "Player: HP 63/75, Block 4, Energy 3, Stars 1" in result.stdout
+    assert "Player powers: Strength 2" in result.stdout
     assert "Incoming attack damage: 6" in result.stdout
     assert "[0] Ring of the Snake: At the start of each combat, draw 2 additional cards." in result.stdout
-    assert "[0] Cultist: HP 24/48, Block 0, Intents attack 6" in result.stdout
+    assert "[0] Cultist: HP 24/48, Block 0, Intents attack 6, Powers none" in result.stdout
     assert "[0] Strike | Basic Attack | cost 1 | playable | target enemy[0] | Deal 8 damage." in result.stdout
+    assert "Piles:" in result.stdout
+    assert "Draw: 5 card(s)" in result.stdout
+    assert "Deck: Strike, Defend" in result.stdout
     assert "- Block: Block prevents attack damage." in result.stdout
     assert "[0] play_card(card_index, target_index=0)" in result.stdout
     assert "[1] end_turn" in result.stdout
@@ -248,6 +252,30 @@ def test_cli_actions_renders_option_index_default_as_text() -> None:
 
     assert result.exit_code == 0
     assert result.stdout == "Legal actions:\n[0] choose_map_node(option_index=0)\n"
+
+
+@respx.mock
+def test_cli_actions_renders_shop_and_potion_option_index() -> None:
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "data": {
+                    "screen": "SHOP",
+                    "available_actions": ["buy_card", "buy_potion", "use_potion"],
+                    "run": {"floor": 2, "gold": 115},
+                },
+            },
+        )
+    )
+
+    result = runner.invoke(app, ["actions", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert "[0] buy_card(option_index=0)" in result.stdout
+    assert "[1] buy_potion(option_index=0)" in result.stdout
+    assert "[2] use_potion(option_index=0, optional target_index)" in result.stdout
 
 
 @respx.mock

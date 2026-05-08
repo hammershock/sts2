@@ -28,6 +28,14 @@ def test_parse_action_args_defaults_option_index_for_option_actions() -> None:
     assert parse_action_args("choose_map_node", ["--option_index", "3"]) == {"option_index": 3}
 
 
+def test_parse_action_args_uses_option_index_for_shop_and_potions() -> None:
+    assert parse_action_args("buy_card", ["4"]) == {"option_index": 4}
+    assert parse_action_args("buy_card", ["--index", "4"]) == {"option_index": 4}
+    assert parse_action_args("use_potion", ["0"]) == {"option_index": 0}
+    assert parse_action_args("use_potion", ["--potion_index", "0"]) == {"option_index": 0}
+    assert parse_action_args("use_potion", ["0", "1"]) == {"option_index": 0, "target_index": 1}
+
+
 def test_parse_action_args_rejects_duplicate_args() -> None:
     with pytest.raises(BridgeError) as exc_info:
         parse_action_args("play_card", ["0", "--card_index", "1"])
