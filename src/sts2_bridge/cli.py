@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from typing import Annotated, Any
 
+import click
 import typer
 import yaml
 from pydantic import BaseModel
@@ -20,6 +21,7 @@ from sts2_bridge.agent_view import (
 from sts2_bridge.client import DEFAULT_BASE_URL, Sts2Client
 from sts2_bridge.models import BridgeError, GameState
 from sts2_bridge.rendering import render_state_view
+from sts2_bridge.trace import log_cli_call, should_log_cli_call, _now_iso
 
 app = typer.Typer(
     invoke_without_command=True,
@@ -411,12 +413,56 @@ def _has_playable_cards(state: GameState) -> bool:
 
 
 def _run_text(command: Any) -> None:
+    started_at = _now_iso()
+    started_monotonic = time.monotonic()
+    context = click.get_current_context(silent=True)
     try:
         payload = command()
         typer.echo(payload, nl=not str(payload).endswith("\n"))
+        _log_cli_text_result(
+            context=context,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            return_code=0,
+            output=str(payload),
+        )
     except BridgeError as exc:
-        typer.echo(_render_error(exc), err=False)
+        output = _render_error(exc)
+        typer.echo(output, err=False)
+        _log_cli_text_result(
+            context=context,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            return_code=1,
+            output=output + "\n",
+        )
         raise typer.Exit(code=1) from exc
+
+
+def _log_cli_text_result(
+    *,
+    context: Any,
+    started_at: str,
+    started_monotonic: float,
+    return_code: int,
+    output: str,
+) -> None:
+    command_path = context.command_path if context is not None else "sts2"
+    argv = sys.argv[1:] or command_path.split()[1:]
+    if not should_log_cli_call(argv):
+        return
+    params = dict(context.params) if context is not None else {}
+    if context is not None and context.args:
+        params["extra_args"] = list(context.args)
+    log_cli_call(
+        command_path=command_path,
+        argv=argv,
+        params=params,
+        started_at=started_at,
+        duration_ms=(time.monotonic() - started_monotonic) * 1000,
+        return_code=return_code,
+        output=output,
+    )
 
 
 def _dump_model(value: Any) -> Any:

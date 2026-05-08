@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import time
 from typing import Any
 
 import httpx
 from pydantic import ValidationError
 
 from sts2_bridge.models import ActionResult, ApiEnvelope, BridgeError, GameState
+from sts2_bridge.trace import log_http_request, _now_iso
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8080"
 
@@ -57,10 +59,21 @@ class Sts2Client:
 
     def _request_data(self, method: str, path: str, **kwargs: Any) -> Any:
         url = f"{self.base_url}{path}"
+        started_at = _now_iso()
+        started_monotonic = time.monotonic()
+        response: httpx.Response | None = None
         try:
             with httpx.Client(timeout=self.timeout, trust_env=self.trust_env) as client:
                 response = client.request(method, url, **kwargs)
         except httpx.ConnectError as exc:
+            log_http_request(
+                method=method,
+                url=url,
+                request_kwargs=kwargs,
+                started_at=started_at,
+                started_monotonic=started_monotonic,
+                error=exc,
+            )
             raise BridgeError(
                 "connection_failed",
                 "Cannot connect to the STS2 Mod API. Confirm the game is running and the Mod is loaded.",
@@ -68,6 +81,14 @@ class Sts2Client:
                 retryable=True,
             ) from exc
         except httpx.TimeoutException as exc:
+            log_http_request(
+                method=method,
+                url=url,
+                request_kwargs=kwargs,
+                started_at=started_at,
+                started_monotonic=started_monotonic,
+                error=exc,
+            )
             raise BridgeError(
                 "timeout",
                 "Timed out while waiting for the STS2 Mod API.",
@@ -75,12 +96,28 @@ class Sts2Client:
                 retryable=True,
             ) from exc
         except httpx.HTTPError as exc:
+            log_http_request(
+                method=method,
+                url=url,
+                request_kwargs=kwargs,
+                started_at=started_at,
+                started_monotonic=started_monotonic,
+                error=exc,
+            )
             raise BridgeError(
                 "http_error",
                 str(exc),
                 details={"base_url": self.base_url},
                 retryable=True,
             ) from exc
+        log_http_request(
+            method=method,
+            url=url,
+            request_kwargs=kwargs,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            response=response,
+        )
 
         try:
             payload = response.json()

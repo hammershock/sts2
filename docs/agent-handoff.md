@@ -168,6 +168,12 @@ Re-read `sts2 state` before acting, because the user may have played manually.
    - Current samples cover health, Neow event, map, choose map node, combat states, play card, and end turn.
    - These samples are regression inputs for filtering behavior.
 
+5. Runtime traces:
+   - Project-level `logs/` is gitignored.
+   - `logs/cli/YYYYMMDD.jsonl` records normal CLI calls, parsed params, return code, and full CLI output.
+   - `logs/http/YYYYMMDD.jsonl` records raw HTTP method, URL, request body, headers, status, response headers, response text, timing, and transport errors.
+   - Help-only invocations and non-TTY no-arg help output are filtered out and not logged.
+
 ## Next Harness Improvements
 
 1. Expand sample coverage:

@@ -63,6 +63,15 @@ Action names can be written canonically or as aliases without separators, such a
 
 Filtering rules live in YAML files under `src/sts2_bridge/schemas/`, split by `state/` and `action/`. Real raw HTTP samples live under `samples/http/` and are used as regression fixtures for the filtering layer.
 
+## Logs
+
+Normal CLI calls write JSONL traces under project-level `logs/`, which is ignored by git:
+
+- `logs/cli/YYYYMMDD.jsonl`: call time, command path, argv, parsed params, return code, and full CLI output.
+- `logs/http/YYYYMMDD.jsonl`: HTTP method, URL, request body, headers, response status, response headers, response text, timing, and transport errors.
+
+Help-only calls such as `sts2 --help`, `sts2 state --help`, and non-TTY no-arg `sts2` help output are intentionally not logged.
+
 ## Screenshot Fallback
 
 `sts2 state --with-window` and `sts2 debug window-status` report whether the game process/window exists and whether Slay the Spire 2 is currently the frontmost app.

@@ -24,7 +24,7 @@ def sample(pattern: str) -> dict:
 
 
 @respx.mock
-def test_cli_health_outputs_text() -> None:
+def test_cli_health_outputs_text(isolated_logs) -> None:
     respx.get(f"{BASE_URL}/health").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "ready"}})
     )
@@ -33,6 +33,10 @@ def test_cli_health_outputs_text() -> None:
 
     assert result.exit_code == 0
     assert result.stdout == "Health: ready\n"
+    records = _read_log_records(isolated_logs, "cli")
+    assert records[-1]["command_path"].endswith("debug health")
+    assert records[-1]["return_code"] == 0
+    assert records[-1]["output"] == "Health: ready\n"
 
 
 @respx.mock
@@ -293,16 +297,17 @@ def test_cli_help_groups_debug_commands_and_removes_combat() -> None:
     assert "window-status" in debug_result.stdout
 
 
-def test_cli_without_args_prints_help_without_tty() -> None:
+def test_cli_without_args_prints_help_without_tty(isolated_logs) -> None:
     result = runner.invoke(app, [])
 
     assert result.exit_code == 0
     assert "Usage: " in result.stdout
     assert "state" in result.stdout
     assert "debug" in result.stdout
+    assert not (isolated_logs / "cli").exists()
 
 
-def test_cli_help_does_not_expose_pretty_or_json_format() -> None:
+def test_cli_help_does_not_expose_pretty_or_json_format(isolated_logs) -> None:
     top_result = runner.invoke(app, ["--help"])
     state_result = runner.invoke(app, ["state", "--help"])
     act_result = runner.invoke(app, ["act", "--help"])
@@ -315,6 +320,7 @@ def test_cli_help_does_not_expose_pretty_or_json_format() -> None:
     combined = top_result.stdout + state_result.stdout + act_result.stdout + debug_result.stdout
     assert "--pretty" not in combined
     assert "--format" not in combined
+    assert not (isolated_logs / "cli").exists()
 
 
 def test_interactive_digit_chooses_map_option() -> None:
@@ -335,3 +341,9 @@ def test_interactive_reward_digit_claims_reward_option() -> None:
     state = GameState.model_validate({"screen": "REWARD", "available_actions": ["claim_reward"]})
 
     assert _interactive_action_from_input("1", state, {}) == ("claim_reward", {"option_index": 1})
+
+
+def _read_log_records(root: Path, category: str) -> list[dict]:
+    files = sorted((root / category).glob("*.jsonl"))
+    assert files
+    return [json.loads(line) for file in files for line in file.read_text(encoding="utf-8").splitlines()]
