@@ -139,6 +139,7 @@ def act(
             )
         resolved_action = resolve_action(action, effective_available_actions(before))
         args = parse_action_args(resolved_action, list(ctx.args))
+        _validate_action_against_state(resolved_action, before)
         result = client.act(resolved_action, args)
         after = result.state if isinstance(result.state, GameState) else _try_state(client)
         if not raw_result:
@@ -523,6 +524,52 @@ def _action_if_available(state: GameState, action: str, args: dict[str, Any]) ->
             retryable=False,
         )
     return action, args
+
+
+def _validate_action_against_state(action: str, state: GameState) -> None:
+    if action not in {"resolve_rewards", "collect_rewards_and_proceed"}:
+        return
+    unloaded_cards = _claimable_unloaded_card_rewards(state)
+    if not unloaded_cards:
+        return
+    raise BridgeError(
+        "unsafe_reward_resolution",
+        "Refusing to resolve rewards while a claimable Card reward has no visible card choices.",
+        details={
+            "action": action,
+            "card_rewards": unloaded_cards,
+            "suggestion": "Run claim_reward with the Card reward option_index first, then choose or skip the visible card options.",
+        },
+        retryable=False,
+    )
+
+
+def _claimable_unloaded_card_rewards(state: GameState) -> list[dict[str, Any]]:
+    reward = state.reward if isinstance(state.reward, dict) else None
+    if not reward:
+        return []
+    card_options = reward.get("card_options")
+    if isinstance(card_options, list) and card_options:
+        return []
+    rows = reward.get("rewards")
+    if not isinstance(rows, list):
+        return []
+
+    result: list[dict[str, Any]] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("reward_type")).lower() != "card":
+            continue
+        if row.get("claimable") is False:
+            continue
+        result.append(
+            {
+                "option_index": row.get("index", index),
+                "description": row.get("description"),
+            }
+        )
+    return result
 
 
 def _has_playable_cards(state: GameState) -> bool:

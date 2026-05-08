@@ -333,6 +333,35 @@ def test_cli_act_rejects_rest_fallback_action_when_api_omits_actions() -> None:
 
 
 @respx.mock
+def test_cli_act_blocks_resolve_rewards_when_card_reward_is_unloaded() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
+    )
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_reward_rows")))
+
+    result = runner.invoke(app, ["act", "resolve_rewards", "--base-url", BASE_URL])
+
+    assert result.exit_code == 1
+    assert "ERROR unsafe_reward_resolution:" in result.stdout
+    assert "claim_reward" in result.stdout
+    assert not route.calls
+
+
+@respx.mock
+def test_cli_act_blocks_collect_rewards_when_card_reward_is_unloaded() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
+    )
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_reward_rows")))
+
+    result = runner.invoke(app, ["act", "collect_rewards_and_proceed", "--base-url", BASE_URL])
+
+    assert result.exit_code == 1
+    assert "ERROR unsafe_reward_resolution:" in result.stdout
+    assert not route.calls
+
+
+@respx.mock
 def test_cli_actions_renders_option_index_default_as_text() -> None:
     respx.get(f"{BASE_URL}/state").mock(
         return_value=httpx.Response(

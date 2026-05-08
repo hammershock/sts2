@@ -61,6 +61,8 @@ The default combat view includes current relics, player/enemy powers, enemy inte
 
 `sts2 act` defaults to a filtered text action result: status, action args, a compact post-action state, and changed fields when a before/after state is available. Use `--raw-result` to inspect the full parsed action result rendered as text.
 
+For reward safety, `sts2 act resolve_rewards` and `sts2 act collect_rewards_and_proceed` refuse to run while a claimable Card reward exists but card choices are not visible. Claim the Card reward first so the Agent can choose or skip the shown cards.
+
 Action names can be written canonically or as aliases without separators, such as `play_card` or `playcard`. The first action argument can also be the numbered action from the current `Legal actions` list, for example `sts2 act 1 --card_index 0` when `[1] play_card(...)` is shown. Action parameters can be passed positionally or by keyword, such as `sts2 act play_card 0 0`, `sts2 act play_card 0 --target_index 0`, or `sts2 act play_card --card_index 0 --target_index 0`. Actions displayed with `option_index=0`, such as `choose_map_node(option_index=0)`, use that default when no explicit option is passed.
 
 Shop and potion actions use `option_index` at the CLI boundary, matching the mod API. Positional shorthand works, for example `sts2 act buy_card 4` and `sts2 act use_potion 0`.

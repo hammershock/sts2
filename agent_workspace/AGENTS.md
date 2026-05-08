@@ -72,6 +72,7 @@ Avoid `--layer raw` unless debugging the bridge. Raw output is large and expensi
 - Use numbered legal actions when possible.
 - Actions displayed as `option_index=0` can be run without extra args, for example `sts2 act 0`.
 - Shop and potion actions use `option_index`, for example `sts2 act buy_card 4` or `sts2 act use_potion 0`.
+- On REWARD, if a Card reward exists but choices are not loaded, run `sts2 act claim_reward --option_index N` for that Card reward first. The CLI blocks `resolve_rewards` and `collect_rewards_and_proceed` in this unsafe state.
 - If a card requires a target and only one valid enemy target is shown, `sts2 act play_card CARD_INDEX` usually works through CLI defaults; explicit `target_index` is also fine.
 - When the game is transitioning, use `sts2 wait --timeout 15` instead of guessing.
 
@@ -81,7 +82,7 @@ The engineering agent has already addressed these feedback items:
 
 - Shop and potion action arguments now consistently use `option_index`; positional shorthand works for `buy_*`, `use_potion`, and `discard_potion`.
 - COMBAT view now includes powers, piles, deck, potions, relic details, card rarity/type, resolved card text, and glossary.
-- REWARD view now lists reward rows, card choices, alternatives, and warns when `resolve_rewards` may skip an unopened card reward.
+- REWARD view now lists reward rows, card choices, alternatives, and warns when `resolve_rewards` may skip an unopened card reward. The CLI also blocks `resolve_rewards` / `collect_rewards_and_proceed` until claimable Card reward choices are visible.
 - CARD_SELECTION view now lists the prompt, selection constraints, indexed candidate cards, and legal actions.
 - REST screens use API actions when available. If the API reports REST with no actions/options, CLI view exposes marked Recovery options, not Legal actions, so the Agent does not call backend-rejected fallback actions by mistake.
 - macOS `window-status`, screenshot, and YAML output now normalize PyObjC string subclasses and should not dump large tracebacks for ordinary CLI errors.
