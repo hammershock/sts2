@@ -21,7 +21,11 @@ from sts2_bridge.client import DEFAULT_BASE_URL, Sts2Client
 from sts2_bridge.models import BridgeError, GameState
 from sts2_bridge.rendering import render_state_view
 
-app = typer.Typer(no_args_is_help=True, help="Layered CLI bridge for Slay the Spire 2 agent control.")
+app = typer.Typer(
+    invoke_without_command=True,
+    no_args_is_help=False,
+    help="Layered CLI bridge for Slay the Spire 2 agent control.",
+)
 debug_app = typer.Typer(no_args_is_help=True, help="Debug commands for API and macOS window inspection.")
 app.add_typer(debug_app, name="debug")
 
@@ -32,6 +36,22 @@ BaseUrlOption = Annotated[
 ]
 TimeoutOption = Annotated[float, typer.Option("--api-timeout", help="HTTP request timeout in seconds.")]
 StateLayerOption = Annotated[str, typer.Option("--layer", help="State layer: view, filtered, raw.")]
+
+
+@app.callback()
+def main(
+    ctx: typer.Context,
+    base_url: BaseUrlOption = None,
+    api_timeout: TimeoutOption = 10.0,
+) -> None:
+    """Run interactive mode when no subcommand is provided."""
+    if ctx.invoked_subcommand is not None:
+        return
+    if not _is_interactive_terminal():
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
+    _interactive(_client(base_url, api_timeout))
+    raise typer.Exit()
 
 
 @debug_app.command()
@@ -254,6 +274,140 @@ def screenshot(
 
 def _client(base_url: str | None, timeout: float) -> Sts2Client:
     return Sts2Client(base_url or os.environ.get("STS2_API_BASE_URL", DEFAULT_BASE_URL), timeout=timeout)
+
+
+def _is_interactive_terminal() -> bool:
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def _interactive(client: Sts2Client) -> None:
+    typer.echo(_interactive_help().rstrip())
+    while True:
+        try:
+            state = client.state()
+            view = build_state_view(state, "brief")
+            typer.echo("")
+            typer.echo(render_state_view(view), nl=False)
+            raw_command = typer.prompt("sts2", default="", show_default=False)
+            command = raw_command.strip()
+            if command.lower() in {"q", "quit", "exit"}:
+                return
+            if command in {"?", "h", "help"}:
+                typer.echo(_interactive_help().rstrip())
+                continue
+            request = _interactive_action_from_input(command, state, view)
+            if request is None:
+                continue
+            action, args = request
+            result = client.act(action, args)
+            status = result.status or "completed"
+            suffix = f" {_inline_mapping(args)}" if args else ""
+            typer.echo(f"done: {action}{suffix} ({status})")
+        except BridgeError as exc:
+            typer.echo(_render_error(exc))
+        except (EOFError, KeyboardInterrupt):
+            typer.echo("")
+            return
+
+
+def _interactive_help() -> str:
+    return "\n".join(
+        [
+            "Interactive keys:",
+            "- Enter: refresh, or take the only non-card action when it is unambiguous",
+            "- 0-9: play that hand card in combat; choose that map/reward option on map/reward screens",
+            "- e: end turn",
+            "- c: collect rewards and proceed",
+            "- r: resolve rewards",
+            "- action args: run an explicit action, e.g. play_card 0 0",
+            "- ?: help",
+            "- q: quit",
+        ]
+    ) + "\n"
+
+
+def _interactive_action_from_input(
+    command: str,
+    state: GameState,
+    view: dict[str, Any],
+) -> tuple[str, dict[str, Any]] | None:
+    if command == "":
+        return _default_interactive_action(state)
+
+    lowered = command.lower()
+    if lowered == "e":
+        return _action_if_available(state, "end_turn", {})
+    if lowered == "c":
+        return _action_if_available(state, "collect_rewards_and_proceed", {})
+    if lowered == "r":
+        return _action_if_available(state, "resolve_rewards", {})
+    if command.isdigit():
+        return _numeric_interactive_action(int(command), state, view)
+
+    tokens = command.split()
+    action = resolve_action(tokens[0], state.available_actions)
+    return action, parse_action_args(action, tokens[1:])
+
+
+def _default_interactive_action(state: GameState) -> tuple[str, dict[str, Any]] | None:
+    actions = state.available_actions
+    non_card_actions = [action for action in actions if action != "play_card"]
+    if len(actions) == 1 and actions[0] != "play_card":
+        action = actions[0]
+        return action, parse_action_args(action, [])
+    if len(non_card_actions) == 1 and not _has_playable_cards(state):
+        action = non_card_actions[0]
+        return action, parse_action_args(action, [])
+    return None
+
+
+def _numeric_interactive_action(
+    index: int,
+    state: GameState,
+    view: dict[str, Any],
+) -> tuple[str, dict[str, Any]]:
+    if state.screen == "MAP" and "choose_map_node" in state.available_actions:
+        return "choose_map_node", {"option_index": index}
+    if state.screen in {"REWARD", "CARD_REWARD"} and "claim_reward" in state.available_actions:
+        return "claim_reward", {"option_index": index}
+    if state.screen == "COMBAT" and "play_card" in state.available_actions:
+        card_args = _card_args_from_view(index, view)
+        if card_args is not None:
+            return "play_card", card_args
+
+    action = resolve_action(str(index), state.available_actions)
+    return action, parse_action_args(action, [])
+
+
+def _card_args_from_view(card_index: int, view: dict[str, Any]) -> dict[str, Any] | None:
+    combat = view.get("combat") or {}
+    cards = combat.get("playable") or combat.get("playable_cards") or []
+    for card in cards:
+        if card.get("card_index") != card_index:
+            continue
+        args = {"card_index": card_index}
+        targets = card.get("valid_targets") or []
+        if card.get("requires_target") and targets:
+            target_index = targets[0].get("target_index")
+            if target_index is not None:
+                args["target_index"] = target_index
+        return args
+    return None
+
+
+def _action_if_available(state: GameState, action: str, args: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    if action not in state.available_actions:
+        raise BridgeError(
+            "invalid_action",
+            f"{action} is not available in the current state.",
+            details={"available_actions": state.available_actions},
+            retryable=False,
+        )
+    return action, args
+
+
+def _has_playable_cards(state: GameState) -> bool:
+    return bool(state.combat and any(card.playable for card in state.combat.hand))
 
 
 def _run_text(command: Any) -> None:

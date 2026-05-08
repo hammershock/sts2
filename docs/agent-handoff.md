@@ -75,6 +75,7 @@ When an invalid arg name is used, the mod often returns a useful message such as
 Use compact views by default:
 
 ```bash
+sts2
 sts2 state
 sts2 state --layer filtered
 sts2 state --layer raw
@@ -83,6 +84,8 @@ sts2 actions
 sts2 wait --timeout 15
 sts2 debug health
 ```
+
+No-arg `sts2` starts an interactive mode only when stdin/stdout are TTYs. In non-TTY agent execution it prints help. Interactive keys: digits choose map/reward options or play combat cards, `e` ends the turn, `c` collects rewards and proceeds, `r` resolves rewards, Enter refreshes or takes the only unambiguous non-card action, `?` shows help, and `q` quits.
 
 Execute actions:
 

@@ -25,6 +25,7 @@ python -m pip install -e ".[dev]"
 ## CLI
 
 ```bash
+sts2
 sts2 state
 sts2 state --layer filtered
 sts2 state --layer raw
@@ -43,6 +44,8 @@ sts2 debug windows
 sts2 screenshot
 sts2 screenshot --activate-fallback
 ```
+
+Running `sts2` with no subcommand starts an interactive TTY mode. In non-TTY environments, such as agent command execution, it prints help instead. Interactive mode uses short keys: digits choose map/reward options or play combat cards, `e` ends the turn, `c` collects rewards and proceeds, `r` resolves rewards, Enter refreshes or takes the only unambiguous non-card action, `?` shows help, and `q` quits.
 
 State output has three layers:
 

@@ -6,7 +6,9 @@ import respx
 import yaml
 from typer.testing import CliRunner
 
-from sts2_bridge.cli import app
+from sts2_bridge.cli import app, _interactive_action_from_input
+from sts2_bridge.filtering import filter_state
+from sts2_bridge.models import GameState
 
 BASE_URL = "http://test.local"
 runner = CliRunner()
@@ -291,6 +293,15 @@ def test_cli_help_groups_debug_commands_and_removes_combat() -> None:
     assert "window-status" in debug_result.stdout
 
 
+def test_cli_without_args_prints_help_without_tty() -> None:
+    result = runner.invoke(app, [])
+
+    assert result.exit_code == 0
+    assert "Usage: " in result.stdout
+    assert "state" in result.stdout
+    assert "debug" in result.stdout
+
+
 def test_cli_help_does_not_expose_pretty_or_json_format() -> None:
     top_result = runner.invoke(app, ["--help"])
     state_result = runner.invoke(app, ["state", "--help"])
@@ -304,3 +315,23 @@ def test_cli_help_does_not_expose_pretty_or_json_format() -> None:
     combined = top_result.stdout + state_result.stdout + act_result.stdout + debug_result.stdout
     assert "--pretty" not in combined
     assert "--format" not in combined
+
+
+def test_interactive_digit_chooses_map_option() -> None:
+    state = GameState.model_validate(sample("state/*_map.json")["data"])
+    view = filter_state(state)
+
+    assert _interactive_action_from_input("2", state, view) == ("choose_map_node", {"option_index": 2})
+
+
+def test_interactive_digit_plays_combat_card_with_default_target() -> None:
+    state = GameState.model_validate(fixture("state_combat")["data"])
+    view = filter_state(state)
+
+    assert _interactive_action_from_input("0", state, view) == ("play_card", {"card_index": 0, "target_index": 0})
+
+
+def test_interactive_reward_digit_claims_reward_option() -> None:
+    state = GameState.model_validate({"screen": "REWARD", "available_actions": ["claim_reward"]})
+
+    assert _interactive_action_from_input("1", state, {}) == ("claim_reward", {"option_index": 1})
