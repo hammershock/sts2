@@ -245,6 +245,13 @@ def click_window(
     }
 
 
+def press_key(key: str = "escape", *, dry_run: bool = False) -> dict[str, Any]:
+    key_code = _key_code(key)
+    if not dry_run:
+        _post_key(key_code)
+    return {"pressed": not dry_run, "dry_run": dry_run, "key": key, "key_code": key_code}
+
+
 def window_click_coordinates(
     window: WindowInfo,
     x: float,
@@ -404,3 +411,39 @@ def _post_left_click(x: int, y: int) -> None:
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, down)
     time.sleep(0.05)
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, up)
+
+
+def _post_key(key_code: int) -> None:
+    try:
+        import Quartz  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise BridgeError(
+            "missing_quartz",
+            "pyobjc-framework-Quartz is required for macOS keyboard fallback.",
+            retryable=False,
+        ) from exc
+
+    down = Quartz.CGEventCreateKeyboardEvent(None, key_code, True)
+    up = Quartz.CGEventCreateKeyboardEvent(None, key_code, False)
+    if down is None or up is None:
+        raise BridgeError(
+            "key_failed",
+            "macOS failed to create a keyboard event. Check Accessibility permission for the terminal app.",
+            retryable=True,
+        )
+    Quartz.CGEventPost(Quartz.kCGHIDEventTap, down)
+    time.sleep(0.05)
+    Quartz.CGEventPost(Quartz.kCGHIDEventTap, up)
+
+
+def _key_code(key: str) -> int:
+    codes = {"escape": 53, "esc": 53}
+    normalized = key.lower()
+    if normalized not in codes:
+        raise BridgeError(
+            "invalid_key",
+            "Unsupported key for macOS keyboard fallback.",
+            details={"key": key, "supported": sorted(codes)},
+            retryable=False,
+        )
+    return codes[normalized]

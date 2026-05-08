@@ -49,7 +49,7 @@ sts2 debug recover-rest --dry-run
 
 `sts2 debug click-window X Y` is a last-resort UI fallback when HTTP actions are stuck but the visible game is clickable. Coordinates are relative to the STS2 window. Prefer `--normalized` and always run `--dry-run` first; only click when the target is obvious from a screenshot.
 
-For the known REST desync after choosing Rest, prefer `sts2 debug recover-rest --dry-run`, then `sts2 debug recover-rest` if the dry run targets the game window. Check the returned `status`: `recovered` means re-read state and continue; `unchanged` means try the suggested alternate targets such as `--target rest-card` or inspect a screenshot and use explicit `debug click-window` coordinates.
+For the known REST desync after choosing Rest, prefer `sts2 debug recover-rest --dry-run`, then `sts2 debug recover-rest` if the dry run targets the game window. The default target is the proven top-left relic point and the command presses Escape after clicking to close the relic modal. Check the returned `status`: `recovered` means re-read state and continue; `unchanged` means try the suggested alternate targets such as `--target rest-card` or inspect a screenshot and use explicit `debug click-window` coordinates.
 
 ## State Reading
 

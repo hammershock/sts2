@@ -516,6 +516,7 @@ def test_cli_debug_recover_rest_dry_run(monkeypatch) -> None:
         }
 
     monkeypatch.setattr(macos_screenshot, "click_window", fake_click_window)
+    monkeypatch.setattr(macos_screenshot, "press_key", lambda *args, **kwargs: {"pressed": False, "dry_run": True})
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_rest_missing_actions")))
 
     result = runner.invoke(app, ["debug", "recover-rest", "--base-url", BASE_URL, "--dry-run"])
@@ -527,9 +528,10 @@ def test_cli_debug_recover_rest_dry_run(monkeypatch) -> None:
     assert payload["before"]["available_actions"] == []
     assert payload["before"]["has_recovery_options"] is True
     assert payload["click"]["screen_point"] == {"x": 101, "y": 202}
-    assert click_calls[0]["args"] == (0.04, 0.67)
+    assert click_calls[0]["args"] == (0.03, 0.333)
     assert click_calls[0]["kwargs"]["normalized"] is True
     assert click_calls[0]["kwargs"]["dry_run"] is True
+    assert payload["escape"]["dry_run"] is True
 
 
 @respx.mock
@@ -542,6 +544,7 @@ def test_cli_debug_recover_rest_allows_potion_only_rest_state(monkeypatch) -> No
         "click_window",
         lambda *args, **kwargs: {"clicked": False, "dry_run": True, "screen_point": {"x": 101, "y": 202}},
     )
+    monkeypatch.setattr(macos_screenshot, "press_key", lambda *args, **kwargs: {"pressed": False, "dry_run": True})
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_rest_potion_only")))
 
     result = runner.invoke(app, ["debug", "recover-rest", "--base-url", BASE_URL, "--dry-run"])
@@ -562,6 +565,7 @@ def test_cli_debug_recover_rest_reports_unchanged_state(monkeypatch) -> None:
         "click_window",
         lambda *args, **kwargs: {"clicked": True, "dry_run": False, "screen_point": {"x": 101, "y": 202}},
     )
+    monkeypatch.setattr(macos_screenshot, "press_key", lambda *args, **kwargs: {"pressed": True, "dry_run": False})
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_rest_potion_only")))
 
     result = runner.invoke(app, ["debug", "recover-rest", "--base-url", BASE_URL])
@@ -570,6 +574,7 @@ def test_cli_debug_recover_rest_reports_unchanged_state(monkeypatch) -> None:
     payload = yaml.safe_load(result.stdout)
     assert payload["status"] == "unchanged"
     assert payload["after"]["has_recovery_options"] is True
+    assert payload["escape"]["pressed"] is True
     assert payload["suggestions"]
 
 
@@ -585,6 +590,7 @@ def test_cli_debug_recover_rest_supports_target_presets(monkeypatch) -> None:
         return {"clicked": False, "dry_run": True, "screen_point": {"x": 101, "y": 202}}
 
     monkeypatch.setattr(macos_screenshot, "click_window", fake_click_window)
+    monkeypatch.setattr(macos_screenshot, "press_key", lambda *args, **kwargs: {"pressed": False, "dry_run": True})
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_rest_potion_only")))
 
     result = runner.invoke(app, ["debug", "recover-rest", "--base-url", BASE_URL, "--dry-run", "--target", "rest-card"])

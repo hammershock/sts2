@@ -41,8 +41,8 @@ TimeoutOption = Annotated[float, typer.Option("--api-timeout", help="HTTP reques
 StateLayerOption = Annotated[str, typer.Option("--layer", help="State layer: view, filtered, raw.")]
 
 REST_RECOVERY_TARGETS = {
-    "relic": (0.04, 0.67),
-    "top-bar-relic": (0.025, 0.30),
+    "relic": (0.03, 0.333),
+    "top-bar-relic": (0.03, 0.333),
     "rest-card": (0.41, 0.43),
     "smith-card": (0.59, 0.43),
 }
@@ -303,6 +303,10 @@ def recover_rest_command(
         typer.Option("--y", help="Override normalized Y coordinate for the recovery click."),
     ] = None,
     double_click: Annotated[bool, typer.Option("--double-click", help="Send two clicks to the selected target.")] = False,
+    escape: Annotated[
+        bool,
+        typer.Option("--escape/--no-escape", help="Press Escape after the click to close a relic detail modal."),
+    ] = True,
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Only report the resolved click and state check.")] = False,
     force: Annotated[bool, typer.Option("--force", help="Allow recovery outside REST/no-action states.")] = False,
 ) -> None:
@@ -311,7 +315,7 @@ def recover_rest_command(
 
     def command() -> str:
         _require_macos()
-        from sts2_bridge.macos_screenshot import click_window
+        from sts2_bridge.macos_screenshot import click_window, press_key
 
         before = client.state()
         actions = effective_available_actions(before)
@@ -340,6 +344,11 @@ def recover_rest_command(
             clicks.append(
                 click_window(click_x, click_y, owner=owner, window_id=window_id, normalized=True, dry_run=False)
             )
+        escape_result: dict[str, Any] | None = None
+        if escape:
+            if not dry_run:
+                time.sleep(0.2)
+            escape_result = press_key("escape", dry_run=dry_run)
         after: dict[str, Any] | None = None
         status = "dry_run"
         suggestions: list[str] = []
@@ -363,6 +372,7 @@ def recover_rest_command(
                 "before": _recovery_state_summary(before),
                 "click": clicks[0],
                 "clicks": clicks,
+                "escape": escape_result,
                 "after": after,
                 "suggestions": suggestions,
             }
