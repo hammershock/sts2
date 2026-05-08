@@ -160,6 +160,7 @@ Re-read `sts2 state` before acting, because the user may have played manually.
    - The default COMBAT view includes current relics, player/enemy powers, playable card rarity/type, resolved card rules text, piles, deck, potions, and the current glossary exposed by the mod.
    - The default MAP view includes current position, indexed path choices, key reachable elite/rest/shop/treasure nodes, and a compact row-by-row reachable map.
    - The default EVENT view includes title, description text, every option index, option title/description, and important flags such as locked/proceed/kill/relic preview.
+   - The default SHOP view includes open inventory cards/relics/potions, true option indices, prices, affordability, sale flags, and card-removal price.
    - The default REWARD view includes reward rows, claimable flags, card choices, skip alternatives, and a warning when a claimable Card reward exists but card choices are not loaded yet.
    - The default CARD_SELECTION view includes the prompt, selection constraints, indexed candidate cards, card rarity/type/cost/rules text, and legal actions.
    - REST screens use API-provided progress actions when available. If the mod reports REST without a rest-progress action, even if unrelated actions like `discard_potion` exist, the CLI shows marked recovery options instead of fake legal HTTP actions.

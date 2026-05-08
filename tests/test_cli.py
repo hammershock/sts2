@@ -116,6 +116,24 @@ def test_cli_state_renders_event_title_and_options() -> None:
 
 
 @respx.mock
+def test_cli_state_renders_open_shop_inventory() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_shop_open")))
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("SHOP floor=22 gold=194")
+    assert "Shop: open" in result.stdout
+    assert "Card removal: 75g affordable" in result.stdout
+    assert "[0] 翻越撑击 | Common Attack | cost 1 | 52g affordable | 奇巧。 对所有敌人造成6点伤害。 | character" in result.stdout
+    assert "[1] 开心小花 | Rare Power | cost 0 | 158g affordable" in result.stdout
+    assert "0g sale unaffordable" not in result.stdout
+    assert "[0] 怀表 | Rare | 304g unaffordable" in result.stdout
+    assert "[0] 火焰药水 | Common | CombatOnly | 48g affordable" in result.stdout
+    assert "Legal actions:\n[0] close_shop_inventory\n[1] buy_card(option_index=0)" in result.stdout
+
+
+@respx.mock
 def test_cli_state_renders_card_selection_options() -> None:
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_card_selection")))
 

@@ -7,7 +7,8 @@ fields:
   chest: chest
   event:
     transform: event
-  shop: shop
+  shop:
+    transform: shop
   rest: rest
   character_select: character_select
   modal: modal

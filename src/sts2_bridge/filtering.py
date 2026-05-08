@@ -65,6 +65,8 @@ def _state_schema_name(state: GameState, view: str) -> str:
         return "state/rest.yaml"
     if state.screen == "EVENT":
         return "state/event.yaml"
+    if state.screen == "SHOP":
+        return "state/shop.yaml"
     return "state/common.yaml"
 
 
@@ -152,6 +154,8 @@ def _transform(root: Any, current: Any, rule: Schema, state: Any) -> Any:
         return _reward_view(root)
     if name == "event":
         return _event_view(root)
+    if name == "shop":
+        return _shop_view(root)
     if name == "incoming_damage":
         if isinstance(root, GameState):
             return estimate_incoming_damage(root)
@@ -455,6 +459,91 @@ def _event_option_view(option: dict[str, Any], index: int, agent_options: dict[i
         "proceed": option.get("is_proceed") or option.get("proceed"),
         "will_kill_player": option.get("will_kill_player"),
         "has_relic_preview": option.get("has_relic_preview"),
+    }
+
+
+def _shop_view(root: Any) -> dict[str, Any]:
+    shop = _get_path(root, "shop")
+    if not isinstance(shop, dict):
+        return {}
+
+    actions = effective_available_actions(root) if isinstance(root, GameState) else []
+    include_inventory = bool(shop.get("is_open") or any(action.startswith("buy_") for action in actions))
+    result: dict[str, Any] = {
+        "open": shop.get("is_open"),
+        "can_open": shop.get("can_open"),
+        "can_close": shop.get("can_close"),
+        "card_removal": _shop_card_removal(shop.get("card_removal")),
+    }
+    if include_inventory:
+        result.update(
+            {
+                "cards": [_shop_card(card, index) for index, card in enumerate(_stocked_items(shop.get("cards")))],
+                "relics": [_shop_relic(relic, index) for index, relic in enumerate(_stocked_items(shop.get("relics")))],
+                "potions": [
+                    _shop_potion(potion, index) for index, potion in enumerate(_stocked_items(shop.get("potions")))
+                ],
+            }
+        )
+    return result
+
+
+def _stocked_items(items: Any) -> list[dict[str, Any]]:
+    if not isinstance(items, list):
+        return []
+    return [item for item in items if isinstance(item, dict) and item.get("is_stocked") is not False]
+
+
+def _shop_card(card: dict[str, Any], index: int) -> dict[str, Any]:
+    return {
+        "option_index": card.get("index", index),
+        "name": card.get("name") or card.get("card_id"),
+        "card_id": card.get("card_id"),
+        "category": card.get("category"),
+        "rarity": card.get("rarity"),
+        "card_type": card.get("card_type"),
+        "cost": "X" if card.get("costs_x") else card.get("energy_cost"),
+        "price": card.get("price"),
+        "on_sale": card.get("on_sale"),
+        "affordable": card.get("enough_gold"),
+        "stocked": card.get("is_stocked"),
+        "resolved_rules_text": card.get("resolved_rules_text") or card.get("rules_text"),
+    }
+
+
+def _shop_relic(relic: dict[str, Any], index: int) -> dict[str, Any]:
+    return {
+        "option_index": relic.get("index", index),
+        "name": relic.get("name") or relic.get("relic_id"),
+        "relic_id": relic.get("relic_id"),
+        "rarity": relic.get("rarity"),
+        "price": relic.get("price"),
+        "affordable": relic.get("enough_gold"),
+        "stocked": relic.get("is_stocked"),
+    }
+
+
+def _shop_potion(potion: dict[str, Any], index: int) -> dict[str, Any]:
+    return {
+        "option_index": potion.get("index", index),
+        "name": potion.get("name") or potion.get("potion_id"),
+        "potion_id": potion.get("potion_id"),
+        "rarity": potion.get("rarity"),
+        "usage": potion.get("usage"),
+        "price": potion.get("price"),
+        "affordable": potion.get("enough_gold"),
+        "stocked": potion.get("is_stocked"),
+    }
+
+
+def _shop_card_removal(card_removal: Any) -> dict[str, Any]:
+    if not isinstance(card_removal, dict):
+        return {}
+    return {
+        "price": card_removal.get("price"),
+        "available": card_removal.get("available"),
+        "used": card_removal.get("used"),
+        "affordable": card_removal.get("enough_gold"),
     }
 
 

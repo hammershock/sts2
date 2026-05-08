@@ -17,6 +17,8 @@ def render_state_view(data: dict[str, Any]) -> str:
         return render_rest_view(data)
     if data.get("screen") == "EVENT" and isinstance(data.get("event"), dict):
         return render_event_view(data)
+    if data.get("screen") == "SHOP" and isinstance(data.get("shop"), dict):
+        return render_shop_view(data)
     return render_generic_view(data)
 
 
@@ -232,6 +234,43 @@ def render_event_view(data: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def render_shop_view(data: dict[str, Any]) -> str:
+    shop = data["shop"]
+    lines = [_header_line(data)]
+    status = "open" if shop.get("open") else "closed"
+    lines.append(f"Shop: {status}")
+
+    removal = shop.get("card_removal") or {}
+    if removal:
+        lines.append(f"Card removal: {_shop_price_line(removal)}")
+
+    cards = shop.get("cards") or []
+    if cards:
+        lines.extend(["", "Cards:"])
+        for card in cards:
+            lines.append(_shop_card_line(card))
+
+    relics = shop.get("relics") or []
+    if relics:
+        lines.extend(["", "Relics:"])
+        for relic in relics:
+            lines.append(_shop_item_line(relic))
+
+    potions = shop.get("potions") or []
+    if potions:
+        lines.extend(["", "Potions:"])
+        for potion in potions:
+            lines.append(_shop_item_line(potion))
+
+    actions = data.get("available_actions") or []
+    if actions:
+        lines.extend(["", "Legal actions:"])
+        for index, action in enumerate(actions):
+            lines.append(f"[{index}] {_action_signature(action, data)}")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def render_reward_view(data: dict[str, Any]) -> str:
     reward = data["reward"]
     rows = reward.get("rewards") or []
@@ -396,6 +435,51 @@ def _event_option_line(option: dict[str, Any]) -> str:
     if option.get("has_relic_preview"):
         traits.append("relic preview")
     return " | ".join(traits)
+
+
+def _shop_card_line(card: dict[str, Any]) -> str:
+    traits = [f"[{_value(card.get('option_index'))}] {card.get('name') or 'Card'}"]
+    metadata = " ".join(str(value) for value in [card.get("rarity"), card.get("card_type")] if value)
+    if metadata:
+        traits.append(metadata)
+    if card.get("cost") is not None:
+        traits.append(f"cost {card.get('cost')}")
+    traits.append(_shop_price_line(card))
+    text = card.get("resolved_rules_text")
+    if text:
+        traits.append(_one_line(text))
+    category = card.get("category")
+    if category:
+        traits.append(str(category))
+    return " | ".join(traits)
+
+
+def _shop_item_line(item: dict[str, Any]) -> str:
+    traits = [f"[{_value(item.get('option_index'))}] {item.get('name') or 'Item'}"]
+    rarity = item.get("rarity")
+    if rarity:
+        traits.append(str(rarity))
+    usage = item.get("usage")
+    if usage:
+        traits.append(str(usage))
+    traits.append(_shop_price_line(item))
+    return " | ".join(traits)
+
+
+def _shop_price_line(item: dict[str, Any]) -> str:
+    price = item.get("price")
+    traits = [f"{_value(price)}g"]
+    if item.get("on_sale"):
+        traits.append("sale")
+    if item.get("affordable") is False:
+        traits.append("unaffordable")
+    elif item.get("affordable") is True:
+        traits.append("affordable")
+    if item.get("available") is False:
+        traits.append("unavailable")
+    if item.get("used"):
+        traits.append("used")
+    return " ".join(traits)
 
 
 def _reward_status(reward: dict[str, Any]) -> str:

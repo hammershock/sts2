@@ -1,0 +1,98 @@
+{
+  "ok": true,
+  "data": {
+    "state_version": 9,
+    "run_id": "seed-shop",
+    "screen": "SHOP",
+    "in_combat": false,
+    "available_actions": [
+      "close_shop_inventory",
+      "buy_card",
+      "buy_relic",
+      "buy_potion",
+      "remove_card_at_shop"
+    ],
+    "run": {
+      "floor": 22,
+      "gold": 194
+    },
+    "shop": {
+      "is_open": true,
+      "can_open": false,
+      "can_close": true,
+      "cards": [
+        {
+          "index": 0,
+          "category": "character",
+          "card_id": "HEEL_HOOK",
+          "name": "翻越撑击",
+          "card_type": "Attack",
+          "rarity": "Common",
+          "energy_cost": 1,
+          "resolved_rules_text": "奇巧。 对所有敌人造成6点伤害。",
+          "price": 52,
+          "on_sale": false,
+          "is_stocked": true,
+          "enough_gold": true
+        },
+        {
+          "index": 1,
+          "category": "colorless",
+          "card_id": "PANACHE",
+          "name": "开心小花",
+          "card_type": "Power",
+          "rarity": "Rare",
+          "energy_cost": 0,
+          "resolved_rules_text": "每当你打出5张牌，对所有敌人造成10点伤害。",
+          "price": 158,
+          "on_sale": false,
+          "is_stocked": true,
+          "enough_gold": true
+        },
+        {
+          "index": 2,
+          "category": "character",
+          "card_id": "",
+          "name": "",
+          "card_type": "",
+          "rarity": "",
+          "energy_cost": 0,
+          "resolved_rules_text": "",
+          "price": 0,
+          "on_sale": true,
+          "is_stocked": false,
+          "enough_gold": false
+        }
+      ],
+      "relics": [
+        {
+          "index": 0,
+          "relic_id": "POCKETWATCH",
+          "name": "怀表",
+          "rarity": "Rare",
+          "price": 304,
+          "is_stocked": true,
+          "enough_gold": false
+        }
+      ],
+      "potions": [
+        {
+          "index": 0,
+          "potion_id": "FIRE_POTION",
+          "name": "火焰药水",
+          "rarity": "Common",
+          "usage": "CombatOnly",
+          "price": 48,
+          "is_stocked": true,
+          "enough_gold": true
+        }
+      ],
+      "card_removal": {
+        "price": 75,
+        "available": true,
+        "used": false,
+        "enough_gold": true
+      }
+    }
+  }
+}
