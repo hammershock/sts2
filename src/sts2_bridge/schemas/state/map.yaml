@@ -1,8 +1,4 @@
 extends: state/common.yaml
 fields:
   map:
-    fields:
-      current_node: map.current_node
-      available_nodes: map.available_nodes
-      options: map.options
-      choices: map.choices
+    transform: map_view

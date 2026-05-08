@@ -16,6 +16,11 @@ def fixture(name: str) -> dict:
     return json.loads(Path(f"tests/fixtures/{name}.json").read_text())
 
 
+def sample(pattern: str) -> dict:
+    path = next(Path("samples/http").glob(pattern))
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 @respx.mock
 def test_cli_health_outputs_text() -> None:
     respx.get(f"{BASE_URL}/health").mock(
@@ -62,6 +67,22 @@ def test_cli_state_filtered_layer_outputs_text() -> None:
     assert payload["combat"]["playable"][0]["resolved_rules_text"] == "Deal 8 damage."
     assert payload["relics"][0]["name"] == "Ring of the Snake"
     assert payload["glossary"]["Block"] == "Block prevents attack damage."
+
+
+@respx.mock
+def test_cli_state_renders_compact_map_view() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=sample("state/*_map.json")))
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("MAP floor=1 gold=99")
+    assert "Current: r0c3" in result.stdout
+    assert "[0] M r1c0" in result.stdout
+    assert "Reachable map:" in result.stdout
+    assert "r8: c1E, c3E, c4M, c5M, c6E" in result.stdout
+    assert "Legal actions:\n[0] choose_map_node(option_index=0)" in result.stdout
+    assert "deck" not in result.stdout
 
 
 @respx.mock

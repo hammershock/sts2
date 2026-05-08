@@ -17,7 +17,14 @@ def test_filter_state_uses_map_schema_on_real_sample() -> None:
 
     assert view["screen"] == "MAP"
     assert view["available_actions"] == ["choose_map_node"]
-    assert "deck" not in json.dumps(view, ensure_ascii=False)
+    assert view["map"]["current"] == {"row": 0, "col": 3}
+    assert view["map"]["choices"][0]["option_index"] == 0
+    assert view["map"]["choices"][0]["type"] == "Monster"
+    assert view["map"]["choices"][0]["highlights"]["E"]
+    assert view["map"]["reachable_rows"][0] == {"row": 1, "nodes": ["c0M", "c3M", "c6M"]}
+    view_text = json.dumps(view, ensure_ascii=False)
+    assert "deck" not in view_text
+    assert "nodes" not in view["map"]
 
 
 def test_filter_state_extracts_chinese_card_numbers_on_real_sample() -> None:

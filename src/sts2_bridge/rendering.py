@@ -7,6 +7,8 @@ from typing import Any
 def render_state_view(data: dict[str, Any]) -> str:
     if data.get("screen") == "COMBAT" and isinstance(data.get("combat"), dict):
         return render_combat_view(data)
+    if data.get("screen") == "MAP" and isinstance(data.get("map"), dict):
+        return render_map_view(data)
     return render_generic_view(data)
 
 
@@ -82,6 +84,40 @@ def render_generic_view(data: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def render_map_view(data: dict[str, Any]) -> str:
+    game_map = data["map"]
+    current = game_map.get("current") or {}
+    choices = game_map.get("choices") or []
+    reachable_rows = game_map.get("reachable_rows") or []
+
+    lines = [
+        _header_line(data),
+        f"Current: r{_value(current.get('row'))}c{_value(current.get('col'))}",
+        "Legend: M=Monster, E=Elite, R=Rest, T=Treasure, S=Shop, ?=Unknown, B=Boss",
+        "",
+    ]
+
+    if choices:
+        lines.append("Choices:")
+        for choice in choices:
+            lines.append(_map_choice_line(choice))
+        lines.append("")
+
+    if reachable_rows:
+        lines.append("Reachable map:")
+        for row in reachable_rows:
+            lines.append(f"r{row.get('row')}: {', '.join(row.get('nodes') or [])}")
+        lines.append("")
+
+    actions = data.get("available_actions") or []
+    if actions:
+        lines.append("Legal actions:")
+        for index, action in enumerate(actions):
+            lines.append(f"[{index}] {_action_signature(action, data)}")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _header_line(data: dict[str, Any]) -> str:
     parts = [str(data.get("screen") or "UNKNOWN")]
     if data.get("turn") is not None:
@@ -141,6 +177,36 @@ def _relic_line(relic: dict[str, Any]) -> str:
     if description:
         return f"{prefix}: {_clean_markup(str(description))}"
     return prefix
+
+
+def _map_choice_line(choice: dict[str, Any]) -> str:
+    option = _value(choice.get("option_index"))
+    row = _value(choice.get("row"))
+    col = _value(choice.get("col"))
+    symbol = _map_symbol(choice.get("type"))
+    parts = [f"[{option}] {symbol} r{row}c{col}"]
+    next_nodes = choice.get("next") or []
+    if next_nodes:
+        parts.append(f"next {', '.join(next_nodes)}")
+    highlights = choice.get("highlights") or {}
+    if highlights:
+        summary = " ".join(f"{key}:{','.join(values)}" for key, values in highlights.items() if values)
+        if summary:
+            parts.append(f"key {summary}")
+    return " | ".join(parts)
+
+
+def _map_symbol(node_type: Any) -> str:
+    return {
+        "Ancient": "A",
+        "Boss": "B",
+        "Elite": "E",
+        "Monster": "M",
+        "RestSite": "R",
+        "Shop": "S",
+        "Treasure": "T",
+        "Unknown": "?",
+    }.get(str(node_type), str(node_type or "?")[:1])
 
 
 def _action_signature(action: str, data: dict[str, Any]) -> str:

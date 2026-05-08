@@ -52,7 +52,7 @@ State output has three layers:
 
 `sts2 state` defaults to the text `view` layer. Use `--layer filtered` for schema-filtered text and `--layer raw` or `--raw` for the full parsed payload rendered as text. Use `--view decision`, `--view combat`, or `--view agent` to select richer filtered state before rendering.
 
-The default combat view includes current relics, enemy intents, playable card rarity/type, resolved card rules text, and the glossary entries currently exposed by the mod.
+The default combat view includes current relics, enemy intents, playable card rarity/type, resolved card rules text, and the glossary entries currently exposed by the mod. The default map view shows current position, indexed choices, key reachable elite/rest/shop/treasure nodes, and a compact row-by-row reachable map.
 
 `sts2 act` defaults to a filtered text action result: status, action args, a compact post-action state, and changed fields when a before/after state is available. Use `--raw-result` to inspect the full parsed action result rendered as text.
 

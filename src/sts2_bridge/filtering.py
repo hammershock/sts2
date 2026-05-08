@@ -127,6 +127,8 @@ def _transform(root: Any, current: Any, rule: Schema, state: Any) -> Any:
         return _card_keywords(root, current)
     if name == "relics":
         return _relics(root)
+    if name == "map_view":
+        return _map_view(root)
     if name == "incoming_damage":
         if isinstance(root, GameState):
             return estimate_incoming_damage(root)
@@ -256,6 +258,143 @@ def _relics(root: Any) -> list[dict[str, Any]]:
             }
         )
     return relics
+
+
+def _map_view(root: Any) -> dict[str, Any]:
+    game_map = _get_path(root, "map")
+    if not isinstance(game_map, dict):
+        return {}
+
+    nodes = [node for node in game_map.get("nodes") or [] if isinstance(node, dict)]
+    nodes_by_coord = {(_get_int(node, "row"), _get_int(node, "col")): node for node in nodes}
+    available_nodes = [node for node in game_map.get("available_nodes") or [] if isinstance(node, dict)]
+    current = game_map.get("current_node") if isinstance(game_map.get("current_node"), dict) else None
+    choices = [_map_choice(option, nodes_by_coord) for option in available_nodes]
+    reachable = _reachable_from_choices(available_nodes, nodes_by_coord)
+
+    return {
+        "current": _coord(current),
+        "choices": choices,
+        "reachable_rows": _reachable_rows(reachable),
+    }
+
+
+def _map_choice(
+    option: dict[str, Any],
+    nodes_by_coord: dict[tuple[int | None, int | None], dict[str, Any]],
+) -> dict[str, Any]:
+    row = _get_int(option, "row")
+    col = _get_int(option, "col")
+    node = nodes_by_coord.get((row, col), option)
+    reachable = _reachable_from(node, nodes_by_coord)
+    children = [_coord(child) for child in node.get("children") or [] if isinstance(child, dict)]
+
+    return {
+        "option_index": option.get("index"),
+        "type": _node_type(node),
+        "row": row,
+        "col": col,
+        "next": [_map_node_ref(nodes_by_coord.get((child.get("row"), child.get("col")), child)) for child in children[:4]],
+        "highlights": _map_highlights(reachable),
+    }
+
+
+def _reachable_from_choices(
+    choices: list[dict[str, Any]],
+    nodes_by_coord: dict[tuple[int | None, int | None], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    reachable_by_coord: dict[tuple[int | None, int | None], dict[str, Any]] = {}
+    for choice in choices:
+        node = nodes_by_coord.get((_get_int(choice, "row"), _get_int(choice, "col")), choice)
+        for item in _reachable_from(node, nodes_by_coord):
+            reachable_by_coord[(_get_int(item, "row"), _get_int(item, "col"))] = item
+    return sorted(
+        reachable_by_coord.values(),
+        key=lambda node: (_get_int(node, "row") or -1, _get_int(node, "col") or -1),
+    )
+
+
+def _reachable_from(
+    start: dict[str, Any],
+    nodes_by_coord: dict[tuple[int | None, int | None], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    pending = [start]
+    seen: set[tuple[int | None, int | None]] = set()
+    reachable: list[dict[str, Any]] = []
+
+    while pending:
+        node = pending.pop(0)
+        coord = (_get_int(node, "row"), _get_int(node, "col"))
+        if coord in seen:
+            continue
+        seen.add(coord)
+        reachable.append(node)
+        for child in node.get("children") or []:
+            if not isinstance(child, dict):
+                continue
+            child_node = nodes_by_coord.get((_get_int(child, "row"), _get_int(child, "col")))
+            if child_node is not None:
+                pending.append(child_node)
+    return reachable
+
+
+def _reachable_rows(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: dict[int, list[str]] = {}
+    for node in nodes:
+        row = _get_int(node, "row")
+        col = _get_int(node, "col")
+        if row is None or col is None:
+            continue
+        rows.setdefault(row, []).append(f"c{col}{_node_symbol(node)}")
+    return [{"row": row, "nodes": rows[row]} for row in sorted(rows)]
+
+
+def _map_highlights(nodes: list[dict[str, Any]]) -> dict[str, list[str]]:
+    wanted = {"Elite": "E", "RestSite": "R", "Shop": "S", "Treasure": "T"}
+    highlights: dict[str, list[str]] = {symbol: [] for symbol in wanted.values()}
+    for node in nodes:
+        symbol = wanted.get(_node_type(node))
+        row = _get_int(node, "row")
+        col = _get_int(node, "col")
+        if symbol is not None and row is not None and col is not None:
+            highlights[symbol].append(f"r{row}c{col}")
+    return {symbol: values[:4] for symbol, values in highlights.items() if values}
+
+
+def _map_node_ref(node: dict[str, Any]) -> str:
+    row = _get_int(node, "row")
+    col = _get_int(node, "col")
+    if row is None or col is None:
+        return _node_symbol(node)
+    return f"r{row}c{col}{_node_symbol(node)}"
+
+
+def _coord(node: dict[str, Any] | None) -> dict[str, int | None]:
+    if not isinstance(node, dict):
+        return {}
+    return {"row": _get_int(node, "row"), "col": _get_int(node, "col")}
+
+
+def _node_type(node: dict[str, Any]) -> str:
+    return str(node.get("node_type") or "Unknown")
+
+
+def _node_symbol(node: dict[str, Any]) -> str:
+    return {
+        "Ancient": "A",
+        "Boss": "B",
+        "Elite": "E",
+        "Monster": "M",
+        "RestSite": "R",
+        "Shop": "S",
+        "Treasure": "T",
+        "Unknown": "?",
+    }.get(_node_type(node), _node_type(node)[:1] or "?")
+
+
+def _get_int(value: dict[str, Any], key: str) -> int | None:
+    item = value.get(key)
+    return item if isinstance(item, int) else None
 
 
 def _summary(state: GameState) -> str:
