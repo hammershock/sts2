@@ -444,6 +444,17 @@ def _run_text(command: Any) -> None:
             output=output + "\n",
         )
         raise typer.Exit(code=1) from exc
+    except Exception as exc:
+        output = f"ERROR cli_error: {type(exc).__name__}: {exc}"
+        typer.echo(output, err=False)
+        _log_cli_text_result(
+            context=context,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            return_code=1,
+            output=output + "\n",
+        )
+        raise typer.Exit(code=1) from exc
 
 
 def _log_cli_text_result(
@@ -473,9 +484,7 @@ def _log_cli_text_result(
 
 
 def _dump_model(value: Any) -> Any:
-    if isinstance(value, BaseModel):
-        return value.model_dump(mode="json", exclude_none=True)
-    return value
+    return _plain_data(value)
 
 
 def _render_health(data: dict[str, Any]) -> str:
@@ -599,6 +608,28 @@ def _macos_window_status_or_error() -> dict[str, Any]:
         return window_status()
     except BridgeError as exc:
         return {"error": exc.to_dict()["error"]}
+
+
+def _plain_data(value: Any) -> Any:
+    if isinstance(value, BaseModel):
+        return _plain_data(value.model_dump(mode="json", exclude_none=True))
+    if isinstance(value, dict):
+        return {str(_plain_data(key)): _plain_data(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_plain_data(item) for item in value]
+    if isinstance(value, Path):
+        return str(value)
+    if value is None or type(value) in {str, int, float, bool}:
+        return value
+    if isinstance(value, str):
+        return str(value)
+    if isinstance(value, bool):
+        return bool(value)
+    if isinstance(value, int):
+        return int(value)
+    if isinstance(value, float):
+        return float(value)
+    return repr(value)
 
 
 def _require_macos() -> None:

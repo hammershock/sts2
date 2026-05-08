@@ -6,7 +6,7 @@ import respx
 import yaml
 from typer.testing import CliRunner
 
-from sts2_bridge.cli import app, _interactive_action_from_input
+from sts2_bridge.cli import app, _interactive_action_from_input, _to_yaml
 from sts2_bridge.filtering import filter_state
 from sts2_bridge.models import GameState
 
@@ -401,6 +401,13 @@ def test_cli_help_does_not_expose_pretty_or_json_format(isolated_logs) -> None:
     assert "--pretty" not in combined
     assert "--format" not in combined
     assert not (isolated_logs / "cli").exists()
+
+
+def test_to_yaml_normalizes_string_subclasses() -> None:
+    class ForeignString(str):
+        pass
+
+    assert _to_yaml({"owner": ForeignString("Slay the Spire 2")}) == "owner: Slay the Spire 2\n"
 
 
 def test_interactive_digit_chooses_map_option() -> None:
