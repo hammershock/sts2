@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 import sys
 import time
@@ -8,6 +7,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import typer
+import yaml
 from pydantic import BaseModel
 
 from sts2_bridge.action_args import parse_action_args, resolve_action
@@ -31,20 +31,17 @@ BaseUrlOption = Annotated[
     typer.Option("--base-url", help="STS2 Mod API base URL. Defaults to STS2_API_BASE_URL or localhost:8080."),
 ]
 TimeoutOption = Annotated[float, typer.Option("--api-timeout", help="HTTP request timeout in seconds.")]
-PrettyOption = Annotated[bool, typer.Option("--pretty", help="Pretty-print JSON output.")]
 StateLayerOption = Annotated[str, typer.Option("--layer", help="State layer: view, filtered, raw.")]
-FormatOption = Annotated[str, typer.Option("--format", help="Output format: text, json.")]
 
 
 @debug_app.command()
 def health(
     base_url: BaseUrlOption = None,
     api_timeout: TimeoutOption = 10.0,
-    pretty: PrettyOption = False,
 ) -> None:
     """Check whether the STS2 Mod API is reachable."""
     client = _client(base_url, api_timeout)
-    _run_json(lambda: {"ok": True, "data": client.health()}, pretty)
+    _run_text(lambda: _render_health(client.health()))
 
 
 @app.command()
@@ -58,17 +55,15 @@ def state(
         typer.Option("--view", help="Filtered schema view: brief, decision, combat, agent."),
     ] = "brief",
     layer: StateLayerOption = "view",
-    output_format: FormatOption = "text",
     with_window: Annotated[
         bool,
         typer.Option("--with-window", help="Include macOS STS2 window/frontmost status when available."),
     ] = False,
-    pretty: PrettyOption = False,
 ) -> None:
     """Read the current game state."""
     client = _client(base_url, api_timeout)
 
-    def command() -> dict[str, Any] | str:
+    def command() -> str:
         game_state = client.state()
         selected_layer = _select_state_layer(raw=raw, agent_view=agent_view, layer=layer)
         selected_view = _select_state_view(raw=raw, agent_view=agent_view, view=view)
@@ -80,23 +75,21 @@ def state(
         if with_window:
             data["window"] = _macos_window_status_or_error()
 
-        selected_format = _select_output_format(output_format, selected_layer)
-        if selected_format == "text":
+        if selected_layer == "view":
             return render_state_view(data)
-        return {"ok": True, "data": data}
+        return _to_yaml(data)
 
-    _run_output(command, pretty)
+    _run_text(command)
 
 
 @app.command()
 def actions(
     base_url: BaseUrlOption = None,
     api_timeout: TimeoutOption = 10.0,
-    pretty: PrettyOption = False,
 ) -> None:
     """List actions available in the current state."""
     client = _client(base_url, api_timeout)
-    _run_json(lambda: {"ok": True, "data": build_actions_view(client.state())}, pretty)
+    _run_text(lambda: _render_actions(build_actions_view(client.state())))
 
 
 @app.command(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
@@ -107,14 +100,13 @@ def act(
     api_timeout: TimeoutOption = 10.0,
     raw_result: Annotated[
         bool,
-        typer.Option("--raw-result", help="Return the full action result and post-action agent view."),
+        typer.Option("--raw-result", help="Return the full action result and post-action agent view as text."),
     ] = False,
-    pretty: PrettyOption = False,
 ) -> None:
     """Execute one game action. Extra tokens after ACTION are parsed as action args."""
     client = _client(base_url, api_timeout)
 
-    def command() -> dict[str, Any]:
+    def command() -> str:
         before = _try_state(client)
         if before is None:
             raise BridgeError(
@@ -127,16 +119,15 @@ def act(
         result = client.act(resolved_action, args)
         after = result.state if isinstance(result.state, GameState) else _try_state(client)
         if not raw_result:
-            return {
-                "ok": True,
-                "data": build_action_result_view(
+            return _render_action_result(
+                build_action_result_view(
                     action=resolved_action,
                     args=args,
                     status=result.status,
                     before=before,
                     after=after,
-                ),
-            }
+                )
+            )
         data = _dump_model(result)
         if after is None:
             data["state_error"] = {"code": "state_unavailable", "message": "Could not read post-action state."}
@@ -144,9 +135,9 @@ def act(
             data["state"] = build_agent_view(after)
         elif isinstance(result.state, GameState):
             data["state"] = build_agent_view(result.state)
-        return {"ok": True, "data": data}
+        return _to_yaml(data)
 
-    _run_json(command, pretty)
+    _run_text(command)
 
 
 @app.command()
@@ -155,12 +146,11 @@ def wait(
     api_timeout: TimeoutOption = 10.0,
     timeout: Annotated[float, typer.Option("--timeout", help="Maximum time to wait in seconds.")] = 30.0,
     interval: Annotated[float, typer.Option("--interval", help="Polling interval in seconds.")] = 0.5,
-    pretty: PrettyOption = False,
 ) -> None:
     """Wait until the game state is readable and has at least one available action."""
     client = _client(base_url, api_timeout)
 
-    def command() -> dict[str, Any]:
+    def command() -> str:
         deadline = time.monotonic() + timeout
         last_error: dict[str, Any] | None = None
         while time.monotonic() <= deadline:
@@ -173,7 +163,7 @@ def wait(
                 time.sleep(interval)
                 continue
             if game_state.available_actions:
-                return {"ok": True, "data": build_agent_view(game_state)}
+                return render_state_view(build_state_view(game_state, "brief"))
             time.sleep(interval)
         raise BridgeError(
             "wait_timeout",
@@ -182,17 +172,16 @@ def wait(
             retryable=True,
         )
 
-    _run_json(command, pretty)
+    _run_text(command)
 
 
 @debug_app.command()
 def windows(
     owner: Annotated[str, typer.Option("--owner", help="macOS window owner name to search for.")] = "Slay the Spire 2",
-    pretty: PrettyOption = False,
 ) -> None:
     """List candidate STS2 windows for screenshot fallback debugging."""
 
-    def command() -> dict[str, Any]:
+    def command() -> str:
         _require_macos()
         from sts2_bridge.macos_screenshot import list_windows, select_game_window
 
@@ -202,31 +191,24 @@ def windows(
             selected = select_game_window(windows_data).to_dict()
         except BridgeError:
             selected = None
-        return {
-            "ok": True,
-            "data": {
-                "selected": selected,
-                "windows": [window.to_dict() for window in windows_data],
-            },
-        }
+        return _to_yaml({"selected": selected, "windows": [window.to_dict() for window in windows_data]})
 
-    _run_json(command, pretty)
+    _run_text(command)
 
 
 @debug_app.command("window-status")
 def window_status_command(
     owner: Annotated[str, typer.Option("--owner", help="macOS window owner name to search for.")] = "Slay the Spire 2",
-    pretty: PrettyOption = False,
 ) -> None:
     """Report whether the STS2 window exists and is the frontmost app."""
 
-    def command() -> dict[str, Any]:
+    def command() -> str:
         _require_macos()
         from sts2_bridge.macos_screenshot import window_status
 
-        return {"ok": True, "data": window_status(owner)}
+        return _to_yaml(window_status(owner))
 
-    _run_json(command, pretty)
+    _run_text(command)
 
 
 @app.command()
@@ -249,62 +231,120 @@ def screenshot(
             help="If window capture fails, briefly activate the game before rectangle capture, then restore focus.",
         ),
     ] = False,
-    pretty: PrettyOption = False,
 ) -> None:
     """Capture the STS2 game window without bringing it to the foreground."""
 
-    def command() -> dict[str, Any]:
+    def command() -> str:
         _require_macos()
         from sts2_bridge.macos_screenshot import capture_window
 
-        return {
-            "ok": True,
-            "data": capture_window(
+        return _to_yaml(
+            capture_window(
                 output,
                 owner=owner,
                 window_id=window_id,
                 include_shadow=include_shadow,
                 allow_rect_fallback=not no_rect_fallback,
                 activate_fallback=activate_fallback,
-            ),
-        }
+            )
+        )
 
-    _run_json(command, pretty)
+    _run_text(command)
 
 
 def _client(base_url: str | None, timeout: float) -> Sts2Client:
     return Sts2Client(base_url or os.environ.get("STS2_API_BASE_URL", DEFAULT_BASE_URL), timeout=timeout)
 
 
-def _run_json(command: Any, pretty: bool) -> None:
+def _run_text(command: Any) -> None:
     try:
         payload = command()
-        _emit(payload, pretty)
+        typer.echo(payload, nl=not str(payload).endswith("\n"))
     except BridgeError as exc:
-        _emit(exc.to_dict(), pretty)
+        typer.echo(_render_error(exc), err=False)
         raise typer.Exit(code=1) from exc
-
-
-def _run_output(command: Any, pretty: bool) -> None:
-    try:
-        payload = command()
-        if isinstance(payload, str):
-            typer.echo(payload, nl=False)
-        else:
-            _emit(payload, pretty)
-    except BridgeError as exc:
-        _emit(exc.to_dict(), pretty)
-        raise typer.Exit(code=1) from exc
-
-
-def _emit(payload: dict[str, Any], pretty: bool) -> None:
-    typer.echo(json.dumps(payload, ensure_ascii=False, indent=2 if pretty else None, sort_keys=pretty))
 
 
 def _dump_model(value: Any) -> Any:
     if isinstance(value, BaseModel):
         return value.model_dump(mode="json", exclude_none=True)
     return value
+
+
+def _render_health(data: dict[str, Any]) -> str:
+    status = data.get("status") or data.get("state") or "ok"
+    lines = [f"Health: {status}"]
+    extra = {key: value for key, value in data.items() if key not in {"status", "state"}}
+    if extra:
+        lines.append(_to_yaml(extra).rstrip())
+    return "\n".join(lines) + "\n"
+
+
+def _render_actions(data: dict[str, Any]) -> str:
+    actions = data.get("available_actions") or []
+    if not actions:
+        return "Legal actions: none\n"
+    lines = ["Legal actions:"]
+    for index, action in enumerate(actions):
+        name = action.get("action") if isinstance(action, dict) else str(action)
+        args = action.get("args") if isinstance(action, dict) else []
+        lines.append(f"[{index}] {_action_signature_text(name, args)}")
+    return "\n".join(lines) + "\n"
+
+
+def _render_action_result(data: dict[str, Any]) -> str:
+    action = data.get("action")
+    action_name = action.get("name") if isinstance(action, dict) else action
+    args = action.get("args") if isinstance(action, dict) else None
+    lines = [
+        f"Action: {action_name or '?'}",
+        f"Status: {data.get('status') or '?'}",
+    ]
+    if args:
+        lines.append(f"Args: {_inline_mapping(args)}")
+    changes = data.get("changes")
+    if changes:
+        lines.extend(["", "Changes:", _to_yaml(changes).rstrip()])
+    state = data.get("state")
+    if state:
+        lines.extend(["", "State:", render_state_view(state).rstrip()])
+    return "\n".join(lines) + "\n"
+
+
+def _render_error(exc: BridgeError) -> str:
+    lines = [f"ERROR {exc.code}: {exc.message}"]
+    if exc.details:
+        lines.extend(["Details:", _to_yaml(exc.details).rstrip()])
+    if exc.retryable:
+        lines.append("Retryable: true")
+    return "\n".join(lines)
+
+
+def _to_yaml(data: Any) -> str:
+    return yaml.safe_dump(_dump_model(data), allow_unicode=True, sort_keys=False).rstrip() + "\n"
+
+
+def _inline_mapping(data: dict[str, Any]) -> str:
+    return ", ".join(f"{key}={value}" for key, value in data.items())
+
+
+def _action_signature_text(name: str, args: list[Any]) -> str:
+    if not args:
+        return name
+    parts: list[str] = []
+    for arg in args:
+        if not isinstance(arg, dict):
+            continue
+        arg_name = arg.get("name")
+        if not arg_name:
+            continue
+        if arg_name == "option_index":
+            parts.append("option_index=0")
+        elif arg.get("required") is True:
+            parts.append(str(arg_name))
+        else:
+            parts.append(f"optional {arg_name}")
+    return f"{name}({', '.join(parts)})" if parts else name
 
 
 def _select_state_view(*, raw: bool, agent_view: bool, view: str) -> str:
@@ -335,21 +375,6 @@ def _select_state_layer(*, raw: bool, agent_view: bool, layer: str) -> str:
             retryable=False,
         )
     return layer
-
-
-def _select_output_format(output_format: str, layer: str) -> str:
-    if output_format not in {"text", "json"}:
-        raise BridgeError(
-            "invalid_cli_arg",
-            "--format must be one of: text, json.",
-            details={"format": output_format},
-            retryable=False,
-        )
-    if output_format == "text" and layer == "raw":
-        return "json"
-    if output_format == "text" and layer == "filtered":
-        return "json"
-    return output_format
 
 
 def _try_state(client: Sts2Client) -> GameState | None:

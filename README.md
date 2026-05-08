@@ -26,35 +26,35 @@ python -m pip install -e ".[dev]"
 
 ```bash
 sts2 state
-sts2 state --layer filtered --pretty
-sts2 state --layer raw --pretty
-sts2 state --view decision --layer filtered --pretty
-sts2 actions --pretty
+sts2 state --layer filtered
+sts2 state --layer raw
+sts2 state --view decision --layer filtered
+sts2 actions
 sts2 act play_card 0
 sts2 act play_card 0 0
 sts2 act playcard --card_index 0
 sts2 act 1 --card_index 0
 sts2 act play_card --card_index 0 --target_index 0
-sts2 wait --timeout 30 --pretty
-sts2 state --with-window --pretty
-sts2 debug health --pretty
-sts2 debug window-status --pretty
-sts2 debug windows --pretty
-sts2 screenshot --pretty
-sts2 screenshot --activate-fallback --pretty
+sts2 wait --timeout 30
+sts2 state --with-window
+sts2 debug health
+sts2 debug window-status
+sts2 debug windows
+sts2 screenshot
+sts2 screenshot --activate-fallback
 ```
 
 State output has three layers:
 
 - `view`: default human-readable text for Agent input.
-- `filtered`: YAML schema-filtered JSON for debugging and downstream tooling.
-- `raw`: full parsed HTTP state for parser/debug work.
+- `filtered`: YAML schema-filtered state rendered as text for debugging and downstream tooling.
+- `raw`: full parsed HTTP state rendered as text for parser/debug work.
 
-`sts2 state` defaults to the text `view` layer. Use `--layer filtered` for schema-filtered JSON and `--layer raw` or `--raw` for the full parsed payload. Use `--view decision`, `--view combat`, or `--view agent` to select richer filtered state before rendering or JSON output. Use `--format json` if a caller wants the selected view layer wrapped as JSON.
+`sts2 state` defaults to the text `view` layer. Use `--layer filtered` for schema-filtered text and `--layer raw` or `--raw` for the full parsed payload rendered as text. Use `--view decision`, `--view combat`, or `--view agent` to select richer filtered state before rendering.
 
 The default combat view includes current relics, enemy intents, playable card rarity/type, resolved card rules text, and the glossary entries currently exposed by the mod.
 
-`sts2 act` defaults to a filtered action result: status, action args, a compact post-action state, and changed fields when a before/after state is available. Use `--raw-result` to inspect the full parsed action result.
+`sts2 act` defaults to a filtered text action result: status, action args, a compact post-action state, and changed fields when a before/after state is available. Use `--raw-result` to inspect the full parsed action result rendered as text.
 
 Action names can be written canonically or as aliases without separators, such as `play_card` or `playcard`. The first action argument can also be the numbered action from the current `Legal actions` list, for example `sts2 act 1 --card_index 0` when `[1] play_card(...)` is shown. Action parameters can be passed positionally or by keyword, such as `sts2 act play_card 0 0`, `sts2 act play_card 0 --target_index 0`, or `sts2 act play_card --card_index 0 --target_index 0`. Actions displayed with `option_index=0`, such as `choose_map_node(option_index=0)`, use that default when no explicit option is passed.
 

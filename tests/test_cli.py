@@ -3,6 +3,7 @@ from pathlib import Path
 
 import httpx
 import respx
+import yaml
 from typer.testing import CliRunner
 
 from sts2_bridge.cli import app
@@ -16,7 +17,7 @@ def fixture(name: str) -> dict:
 
 
 @respx.mock
-def test_cli_health_outputs_json() -> None:
+def test_cli_health_outputs_text() -> None:
     respx.get(f"{BASE_URL}/health").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "ready"}})
     )
@@ -24,7 +25,7 @@ def test_cli_health_outputs_json() -> None:
     result = runner.invoke(app, ["debug", "health", "--base-url", BASE_URL])
 
     assert result.exit_code == 0
-    assert json.loads(result.stdout) == {"ok": True, "data": {"status": "ready"}}
+    assert result.stdout == "Health: ready\n"
 
 
 @respx.mock
@@ -46,20 +47,21 @@ def test_cli_state_defaults_to_text_view() -> None:
 
 
 @respx.mock
-def test_cli_state_filtered_layer_outputs_json() -> None:
+def test_cli_state_filtered_layer_outputs_text() -> None:
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_combat")))
 
     result = runner.invoke(app, ["state", "--layer", "filtered", "--base-url", BASE_URL])
 
     assert result.exit_code == 0
-    payload = json.loads(result.stdout)
-    assert payload["data"]["screen"] == "COMBAT"
-    assert payload["data"]["combat"]["playable"][0]["card_name"] == "Strike"
-    assert payload["data"]["combat"]["playable"][0]["rarity"] == "Basic"
-    assert payload["data"]["combat"]["playable"][0]["card_type"] == "Attack"
-    assert payload["data"]["combat"]["playable"][0]["resolved_rules_text"] == "Deal 8 damage."
-    assert payload["data"]["relics"][0]["name"] == "Ring of the Snake"
-    assert payload["data"]["glossary"]["Block"] == "Block prevents attack damage."
+    assert not result.stdout.lstrip().startswith("{")
+    payload = yaml.safe_load(result.stdout)
+    assert payload["screen"] == "COMBAT"
+    assert payload["combat"]["playable"][0]["card_name"] == "Strike"
+    assert payload["combat"]["playable"][0]["rarity"] == "Basic"
+    assert payload["combat"]["playable"][0]["card_type"] == "Attack"
+    assert payload["combat"]["playable"][0]["resolved_rules_text"] == "Deal 8 damage."
+    assert payload["relics"][0]["name"] == "Ring of the Snake"
+    assert payload["glossary"]["Block"] == "Block prevents attack damage."
 
 
 @respx.mock
@@ -69,8 +71,7 @@ def test_cli_act_rejects_legacy_arg_option() -> None:
     result = runner.invoke(app, ["act", "play_card", "--arg", "card_index=0", "--base-url", BASE_URL])
 
     assert result.exit_code == 1
-    payload = json.loads(result.stdout)
-    assert payload["error"]["code"] == "invalid_cli_arg"
+    assert result.stdout.startswith("ERROR invalid_cli_arg:")
 
 
 @respx.mock
@@ -116,8 +117,10 @@ def test_cli_act_parses_action_alias_and_keyword_args() -> None:
 
     assert result.exit_code == 0
     assert json.loads(route.calls.last.request.content) == {"action": "play_card", "card_index": 0, "target_index": 1}
-    assert json.loads(result.stdout)["data"]["state"]["available_actions"] == ["end_turn"]
-    assert "changes" in json.loads(result.stdout)["data"]
+    assert "Action: play_card" in result.stdout
+    assert "Args: card_index=0, target_index=1" in result.stdout
+    assert "Changes:" in result.stdout
+    assert "[0] end_turn" in result.stdout
 
 
 @respx.mock
@@ -199,6 +202,28 @@ def test_cli_act_uses_default_option_index_for_numbered_option_action() -> None:
 
 
 @respx.mock
+def test_cli_actions_renders_option_index_default_as_text() -> None:
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "data": {
+                    "screen": "MAP",
+                    "available_actions": ["choose_map_node"],
+                    "run": {"floor": 2, "gold": 115},
+                },
+            },
+        )
+    )
+
+    result = runner.invoke(app, ["actions", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert result.stdout == "Legal actions:\n[0] choose_map_node(option_index=0)\n"
+
+
+@respx.mock
 def test_cli_rejects_invalid_arg_shape() -> None:
     respx.get(f"{BASE_URL}/state").mock(
         return_value=httpx.Response(
@@ -218,8 +243,7 @@ def test_cli_rejects_invalid_arg_shape() -> None:
     result = runner.invoke(app, ["act", "play_card", "--arg", "card_index", "--base-url", BASE_URL])
 
     assert result.exit_code == 1
-    payload = json.loads(result.stdout)
-    assert payload["error"]["code"] == "invalid_cli_arg"
+    assert result.stdout.startswith("ERROR invalid_cli_arg:")
 
 
 def test_cli_policy_commands_are_not_registered() -> None:
@@ -244,3 +268,18 @@ def test_cli_help_groups_debug_commands_and_removes_combat() -> None:
     assert "health" in debug_result.stdout
     assert "windows" in debug_result.stdout
     assert "window-status" in debug_result.stdout
+
+
+def test_cli_help_does_not_expose_pretty_or_json_format() -> None:
+    top_result = runner.invoke(app, ["--help"])
+    state_result = runner.invoke(app, ["state", "--help"])
+    act_result = runner.invoke(app, ["act", "--help"])
+    debug_result = runner.invoke(app, ["debug", "health", "--help"])
+
+    assert top_result.exit_code == 0
+    assert state_result.exit_code == 0
+    assert act_result.exit_code == 0
+    assert debug_result.exit_code == 0
+    combined = top_result.stdout + state_result.stdout + act_result.stdout + debug_result.stdout
+    assert "--pretty" not in combined
+    assert "--format" not in combined

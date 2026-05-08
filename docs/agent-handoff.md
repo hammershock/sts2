@@ -1,6 +1,6 @@
 # STS2 Agent Handoff
 
-This file is the compact starting context for future agents working on this repo. Prefer this over past terminal logs or full JSON state dumps.
+This file is the compact starting context for future agents working on this repo. Prefer this over past terminal logs or full raw state dumps.
 
 ## Current Purpose
 
@@ -76,12 +76,12 @@ Use compact views by default:
 
 ```bash
 sts2 state
-sts2 state --layer filtered --pretty
-sts2 state --layer raw --pretty
-sts2 state --view decision --layer filtered --pretty
-sts2 actions --pretty
-sts2 wait --timeout 15 --pretty
-sts2 debug health --pretty
+sts2 state --layer filtered
+sts2 state --layer raw
+sts2 state --view decision --layer filtered
+sts2 actions
+sts2 wait --timeout 15
+sts2 debug health
 ```
 
 Execute actions:
@@ -93,18 +93,18 @@ sts2 act play_card 0 --target_index 0
 sts2 act playcard --card_index 0
 sts2 act 1 --card_index 0
 sts2 act play_card --card_index 0 --target_index 0
-sts2 act end_turn --pretty
-sts2 act choose_map_node 0 --pretty
+sts2 act end_turn
+sts2 act choose_map_node 0
 ```
 
 Window and screenshot debugging:
 
 ```bash
-sts2 state --with-window --pretty
-sts2 debug window-status --pretty
-sts2 debug windows --pretty
-sts2 screenshot --pretty
-sts2 screenshot --activate-fallback --pretty
+sts2 state --with-window
+sts2 debug window-status
+sts2 debug windows
+sts2 screenshot
+sts2 screenshot --activate-fallback
 ```
 
 ## Current Live Run Snapshot
@@ -122,7 +122,7 @@ As of the last manual play session:
 - Next map action: one available Monster node, likely:
 
 ```bash
-sts2 act choose_map_node 0 --pretty
+sts2 act choose_map_node 0
 ```
 
 Re-read `sts2 state` before acting, because the user may have played manually.
@@ -137,14 +137,14 @@ Re-read `sts2 state` before acting, because the user may have played manually.
   - `turn` changed and hand/playable cards are populated
   - combat ended
 - Background game windows can update slowly. Poll conservatively and cap retries.
-- Full JSON output is very expensive. Prefer compact summaries and omit deck/map internals unless directly needed.
+- Full raw output is very expensive. Prefer compact summaries and omit deck/map internals unless directly needed.
 - Screenshot is only a debugging fallback. The structured mod state should be primary.
 
 ## Implemented Filter Layer
 
 1. Three state layers:
-   - `raw`: full parsed HTTP state, exposed by `sts2 state --layer raw` or `--raw`.
-   - `filtered`: YAML schema-filtered JSON, exposed by `sts2 state --layer filtered`.
+   - `raw`: full parsed HTTP state rendered as text, exposed by `sts2 state --layer raw` or `--raw`.
+   - `filtered`: YAML schema-filtered state rendered as text, exposed by `sts2 state --layer filtered`.
    - `view`: default human-readable text, exposed by `sts2 state`.
 
 2. Schema-driven state filtering:
@@ -156,8 +156,8 @@ Re-read `sts2 state` before acting, because the user may have played manually.
 
 3. Filtered action results:
    - YAML schemas live under `src/sts2_bridge/schemas/action/`.
-   - Default `sts2 act` returns `status`, action args, compact post-action state, and before/after deltas.
-   - `--raw-result` preserves the old full action-result inspection mode.
+   - Default `sts2 act` renders `status`, action args, compact post-action state, and before/after deltas as text.
+   - `--raw-result` preserves full action-result inspection mode, rendered as text.
 
 4. Real HTTP samples:
    - Raw envelopes live under `samples/http/health`, `samples/http/state`, and `samples/http/action`.
@@ -199,4 +199,4 @@ Re-read `sts2 state` before acting, because the user may have played manually.
 
 ## Design Direction
 
-The bridge should become an AI harness, not just a JSON pipe. The LLM should receive concise decision packets and only be invoked for choices that are strategically meaningful. Cheap deterministic code should handle obvious combat micro-actions, reward collection, proceed buttons, and state stabilization.
+The bridge should become an AI harness, not just a raw payload pipe. The LLM should receive concise decision packets and only be invoked for choices that are strategically meaningful. Cheap deterministic code should handle obvious combat micro-actions, reward collection, proceed buttons, and state stabilization.
