@@ -85,3 +85,25 @@ def test_filter_state_does_not_show_rest_fallback_options_after_rest_choice() ->
 
     assert view["available_actions"] == ["proceed"]
     assert "rest" not in view
+
+
+def test_filter_state_extracts_reward_rows() -> None:
+    state = GameState.model_validate(json.loads(Path("tests/fixtures/state_reward_rows.json").read_text())["data"])
+
+    view = filter_state(state)
+
+    assert view["screen"] == "REWARD"
+    assert view["reward"]["rewards"][0]["line"] == "Gold: 17金币"
+    assert view["reward"]["rewards"][1]["reward_type"] == "Card"
+    assert "card_options" not in view["reward"]
+
+
+def test_filter_state_extracts_reward_card_choices() -> None:
+    state = GameState.model_validate(json.loads(Path("tests/fixtures/state_reward_cards.json").read_text())["data"])
+
+    view = filter_state(state)
+
+    assert view["reward"]["pending_card_choice"] is True
+    assert view["reward"]["card_options"][0]["option_index"] == 0
+    assert view["reward"]["card_options"][0]["name"] == "精准"
+    assert view["reward"]["alternatives"][0]["label"] == "跳过"

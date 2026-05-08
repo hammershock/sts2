@@ -146,6 +146,8 @@ def _transform(root: Any, current: Any, rule: Schema, state: Any) -> Any:
         return _selection_view(root)
     if name == "rest":
         return _rest_view(root)
+    if name == "reward":
+        return _reward_view(root)
     if name == "incoming_damage":
         if isinstance(root, GameState):
             return estimate_incoming_damage(root)
@@ -226,7 +228,7 @@ def _card_keywords(root: Any, card: Any) -> list[str]:
         return [str(item) for item in direct_value if item]
 
     index = _get_path(card, "index")
-    for path in ("agent_view.combat.hand", "agent_view.selection.cards"):
+    for path in ("agent_view.combat.hand", "agent_view.selection.cards", "agent_view.reward.cards"):
         items = _get_path(root, path)
         if not isinstance(items, list):
             continue
@@ -360,6 +362,76 @@ def _rest_view(root: Any) -> dict[str, Any]:
     if not isinstance(root, GameState):
         return {}
     return {"options": effective_rest_options(root)}
+
+
+def _reward_view(root: Any) -> dict[str, Any]:
+    reward = _get_path(root, "reward")
+    if not isinstance(reward, dict):
+        return {}
+
+    return {
+        "pending_card_choice": reward.get("pending_card_choice"),
+        "can_proceed": reward.get("can_proceed"),
+        "rewards": _reward_rows(root, reward),
+        "card_options": _reward_cards(root, reward),
+        "alternatives": _reward_alternatives(root, reward),
+    }
+
+
+def _reward_rows(root: Any, reward: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = reward.get("rewards") if isinstance(reward.get("rewards"), list) else []
+    agent_rows = _indexed_agent_lines(_get_path(root, "agent_view.reward.rewards"))
+    result: list[dict[str, Any]] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+        option_index = row.get("index", index)
+        result.append(
+            {
+                "option_index": option_index,
+                "reward_type": row.get("reward_type"),
+                "description": row.get("description"),
+                "claimable": row.get("claimable"),
+                "line": agent_rows.get(option_index),
+            }
+        )
+    return result
+
+
+def _reward_cards(root: Any, reward: dict[str, Any]) -> list[dict[str, Any]]:
+    cards = reward.get("card_options") if isinstance(reward.get("card_options"), list) else []
+    return [_selection_card_view(root, card) for card in cards if isinstance(card, dict)]
+
+
+def _reward_alternatives(root: Any, reward: dict[str, Any]) -> list[dict[str, Any]]:
+    alternatives = reward.get("alternatives") if isinstance(reward.get("alternatives"), list) else []
+    agent_alternatives = _indexed_agent_lines(_get_path(root, "agent_view.reward.alternatives"))
+    result: list[dict[str, Any]] = []
+    for index, option in enumerate(alternatives):
+        if not isinstance(option, dict):
+            continue
+        option_index = option.get("index", index)
+        result.append(
+            {
+                "option_index": option_index,
+                "label": option.get("label") or agent_alternatives.get(option_index),
+            }
+        )
+    return result
+
+
+def _indexed_agent_lines(items: Any) -> dict[int, str]:
+    if not isinstance(items, list):
+        return {}
+    result: dict[int, str] = {}
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            continue
+        option_index = item.get("i", index)
+        line = item.get("line")
+        if isinstance(option_index, int) and isinstance(line, str):
+            result[option_index] = line
+    return result
 
 
 def _pile_cards(piles: dict[str, Any], name: str) -> list[Any]:

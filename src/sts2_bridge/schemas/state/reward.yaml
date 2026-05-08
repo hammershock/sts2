@@ -1,4 +1,5 @@
 extends: state/common.yaml
 fields:
-  reward: reward
+  reward:
+    transform: reward
   selection: selection

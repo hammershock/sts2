@@ -58,6 +58,7 @@ Default `sts2 state` is the Agent view. Prefer it over raw payloads.
 - COMBAT shows HP, block, energy, enemies, intents, playable hand, legal actions, relics, and glossary.
 - MAP shows current position, choices, key reachable nodes, and a compact reachable map.
 - COMBAT also includes powers, piles, deck, and potions when the mod exposes them. Prefer this compact view over raw state for tactical decisions.
+- REWARD shows reward rows, card choices, and skip alternatives. If a Card reward says choices are not loaded, claim that Card reward first; `resolve_rewards` may skip unresolved card rewards.
 - CARD_SELECTION shows the prompt, selection constraints, and indexed candidate cards. Use the shown option index with `select_deck_card`.
 - REST normally shows legal actions from the mod. If it shows Recovery options, the API omitted executable rest actions; do not run `sts2 act` for those options. Use screenshot plus `debug click-window` only when recovery is necessary.
 - Other screens may be less detailed; use legal actions and concise state text first.
@@ -80,6 +81,7 @@ The engineering agent has already addressed these feedback items:
 
 - Shop and potion action arguments now consistently use `option_index`; positional shorthand works for `buy_*`, `use_potion`, and `discard_potion`.
 - COMBAT view now includes powers, piles, deck, potions, relic details, card rarity/type, resolved card text, and glossary.
+- REWARD view now lists reward rows, card choices, alternatives, and warns when `resolve_rewards` may skip an unopened card reward.
 - CARD_SELECTION view now lists the prompt, selection constraints, indexed candidate cards, and legal actions.
 - REST screens use API actions when available. If the API reports REST with no actions/options, CLI view exposes marked Recovery options, not Legal actions, so the Agent does not call backend-rejected fallback actions by mistake.
 - macOS `window-status`, screenshot, and YAML output now normalize PyObjC string subclasses and should not dump large tracebacks for ordinary CLI errors.

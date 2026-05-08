@@ -1,0 +1,45 @@
+{
+  "ok": true,
+  "request_id": "req_test_reward_rows",
+  "data": {
+    "state_version": 9,
+    "run_id": "seed-reward",
+    "screen": "REWARD",
+    "in_combat": false,
+    "available_actions": ["resolve_rewards", "collect_rewards_and_proceed", "claim_reward"],
+    "run": {
+      "floor": 14,
+      "gold": 22
+    },
+    "reward": {
+      "pending_card_choice": false,
+      "can_proceed": true,
+      "rewards": [
+        {
+          "index": 0,
+          "reward_type": "Gold",
+          "description": "17金币",
+          "claimable": true
+        },
+        {
+          "index": 1,
+          "reward_type": "Card",
+          "description": "将一张牌添加到你的牌组。",
+          "claimable": true
+        }
+      ],
+      "card_options": [],
+      "alternatives": []
+    },
+    "agent_view": {
+      "reward": {
+        "rewards": [
+          {"i": 0, "line": "Gold: 17金币", "claimable": true},
+          {"i": 1, "line": "Card: 将一张牌添加到你的牌组。", "claimable": true}
+        ],
+        "cards": [],
+        "alternatives": []
+      }
+    }
+  }
+}

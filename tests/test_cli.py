@@ -149,6 +149,39 @@ def test_cli_state_does_not_render_rest_fallback_options_after_choice() -> None:
 
 
 @respx.mock
+def test_cli_state_renders_reward_rows_and_unloaded_card_note() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_reward_rows")))
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("REWARD floor=14 gold=22")
+    assert "Reward: pending_card_choice=false, can_proceed=true" in result.stdout
+    assert "[0] Gold: 17金币 | claimable" in result.stdout
+    assert "[1] Card: 将一张牌添加到你的牌组。 | claimable" in result.stdout
+    assert "Card choices: not loaded" in result.stdout
+    assert "claim the Card reward first" in result.stdout
+    assert "[0] resolve_rewards(may skip unresolved card reward)" in result.stdout
+    assert "[2] claim_reward(option_index=0)" in result.stdout
+
+
+@respx.mock
+def test_cli_state_renders_reward_card_choices() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_reward_cards")))
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert "Reward: pending_card_choice=true, can_proceed=false" in result.stdout
+    assert "Card choices:" in result.stdout
+    assert "[0] 精准 | Uncommon Power | cost 1 | 小刀额外造成4点伤害。" in result.stdout
+    assert "[1] 投掷匕首 | Common Attack | cost 1 | 造成9点伤害。 抽1张牌。 丢弃一张牌。" in result.stdout
+    assert "Alternatives:\n[0] 跳过" in result.stdout
+    assert "[0] choose_reward_card(option_index=0)" in result.stdout
+    assert "[1] skip_reward_cards" in result.stdout
+
+
+@respx.mock
 def test_cli_act_rejects_legacy_arg_option() -> None:
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_combat")))
 

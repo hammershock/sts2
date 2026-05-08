@@ -1,0 +1,56 @@
+{
+  "ok": true,
+  "request_id": "req_test_reward_cards",
+  "data": {
+    "state_version": 9,
+    "run_id": "seed-reward",
+    "screen": "REWARD",
+    "in_combat": false,
+    "available_actions": ["choose_reward_card", "skip_reward_cards"],
+    "run": {
+      "floor": 14,
+      "gold": 39
+    },
+    "reward": {
+      "pending_card_choice": true,
+      "can_proceed": false,
+      "rewards": [],
+      "card_options": [
+        {
+          "index": 0,
+          "card_id": "ACCURACY",
+          "name": "精准",
+          "upgraded": false,
+          "card_type": "Power",
+          "rarity": "Uncommon",
+          "energy_cost": 1,
+          "resolved_rules_text": "小刀额外造成4点伤害。"
+        },
+        {
+          "index": 1,
+          "card_id": "DAGGER_THROW",
+          "name": "投掷匕首",
+          "upgraded": false,
+          "card_type": "Attack",
+          "rarity": "Common",
+          "energy_cost": 1,
+          "resolved_rules_text": "造成9点伤害。 抽1张牌。 丢弃一张牌。"
+        }
+      ],
+      "alternatives": [
+        {"index": 0, "label": "跳过"}
+      ]
+    },
+    "agent_view": {
+      "reward": {
+        "cards": [
+          {"i": 0, "line": "精准：小刀额外造成4点伤害。", "keywords": []},
+          {"i": 1, "line": "投掷匕首：造成9点伤害。 抽1张牌。 丢弃一张牌。", "keywords": []}
+        ],
+        "alternatives": [
+          {"i": 0, "line": "跳过"}
+        ]
+      }
+    }
+  }
+}

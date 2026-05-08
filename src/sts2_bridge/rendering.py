@@ -11,6 +11,8 @@ def render_state_view(data: dict[str, Any]) -> str:
         return render_map_view(data)
     if data.get("screen") == "CARD_SELECTION" and isinstance(data.get("selection"), dict):
         return render_selection_view(data)
+    if data.get("screen") in {"REWARD", "CARD_REWARD"} and isinstance(data.get("reward"), dict):
+        return render_reward_view(data)
     if data.get("screen") == "REST" and isinstance(data.get("rest"), dict):
         return render_rest_view(data)
     return render_generic_view(data)
@@ -198,6 +200,49 @@ def render_rest_view(data: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def render_reward_view(data: dict[str, Any]) -> str:
+    reward = data["reward"]
+    rows = reward.get("rewards") or []
+    card_options = reward.get("card_options") or []
+    alternatives = reward.get("alternatives") or []
+
+    lines = [_header_line(data)]
+    status = _reward_status(reward)
+    if status:
+        lines.append(f"Reward: {status}")
+
+    if rows:
+        lines.extend(["", "Rewards:"])
+        for row in rows:
+            lines.append(_reward_row_line(row))
+
+    if card_options:
+        lines.extend(["", "Card choices:"])
+        for card in card_options:
+            lines.append(_selection_card_line(card))
+    elif _has_claimable_card_reward(rows):
+        lines.extend(
+            [
+                "",
+                "Card choices: not loaded",
+                "Note: claim the Card reward first; resolve_rewards may skip unresolved card rewards.",
+            ]
+        )
+
+    if alternatives:
+        lines.extend(["", "Alternatives:"])
+        for option in alternatives:
+            lines.append(_reward_alternative_line(option))
+
+    actions = data.get("available_actions") or []
+    if actions:
+        lines.extend(["", "Legal actions:"])
+        for index, action in enumerate(actions):
+            lines.append(f"[{index}] {_action_signature(action, data)}")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _header_line(data: dict[str, Any]) -> str:
     parts = [str(data.get("screen") or "UNKNOWN")]
     if data.get("turn") is not None:
@@ -299,6 +344,44 @@ def _rest_option_line(option: dict[str, Any]) -> str:
     if option.get("source") == "fallback":
         traits.append("recovery: API did not expose executable rest actions")
     return " | ".join(traits)
+
+
+def _reward_status(reward: dict[str, Any]) -> str:
+    parts: list[str] = []
+    if reward.get("pending_card_choice") is not None:
+        parts.append(f"pending_card_choice={str(reward.get('pending_card_choice')).lower()}")
+    if reward.get("can_proceed") is not None:
+        parts.append(f"can_proceed={str(reward.get('can_proceed')).lower()}")
+    return ", ".join(parts)
+
+
+def _reward_row_line(row: dict[str, Any]) -> str:
+    line = row.get("line")
+    if line:
+        prefix = f"[{_value(row.get('option_index'))}] {_clean_markup(str(line))}"
+    else:
+        reward_type = row.get("reward_type") or "Reward"
+        description = row.get("description")
+        prefix = f"[{_value(row.get('option_index'))}] {reward_type}"
+        if description:
+            prefix = f"{prefix}: {_clean_markup(str(description))}"
+    traits = [prefix]
+    if row.get("claimable") is not None:
+        traits.append("claimable" if row.get("claimable") else "not claimable")
+    return " | ".join(traits)
+
+
+def _reward_alternative_line(option: dict[str, Any]) -> str:
+    return f"[{_value(option.get('option_index'))}] {option.get('label') or 'Alternative'}"
+
+
+def _has_claimable_card_reward(rows: list[Any]) -> bool:
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("reward_type")).lower() == "card" and row.get("claimable") is not False:
+            return True
+    return False
 
 
 def _has_fallback_options(options: list[Any]) -> bool:
@@ -411,6 +494,8 @@ def _action_signature(action: str, data: dict[str, Any]) -> str:
         return f"{action}(option_index=0)"
     if action.startswith("buy_"):
         return f"{action}(option_index=0)"
+    if action == "resolve_rewards" and _has_claimable_card_reward((data.get("reward") or {}).get("rewards") or []):
+        return "resolve_rewards(may skip unresolved card reward)"
     return action
 
 
