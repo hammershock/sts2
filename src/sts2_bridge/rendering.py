@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 
@@ -15,6 +16,8 @@ def render_combat_view(data: dict[str, Any]) -> str:
     hp = player.get("hp") or {}
     enemies = combat.get("enemies") or []
     playable = combat.get("playable") or combat.get("playable_cards") or []
+    relics = data.get("relics") or []
+    glossary = data.get("glossary") or {}
 
     player_parts = [
         f"HP {_hp(hp)}",
@@ -30,6 +33,12 @@ def render_combat_view(data: dict[str, Any]) -> str:
         f"Incoming attack damage: {_value(combat.get('incoming_damage'))}",
         "",
     ]
+
+    if relics:
+        lines.append("Relics:")
+        for relic in relics:
+            lines.append(_relic_line(relic))
+        lines.append("")
 
     if enemies:
         lines.append("Enemies:")
@@ -48,6 +57,13 @@ def render_combat_view(data: dict[str, Any]) -> str:
         lines.append("Legal actions:")
         for index, action in enumerate(actions):
             lines.append(f"[{index}] {_action_signature(action, data)}")
+
+    if glossary:
+        if actions:
+            lines.append("")
+        lines.append("Glossary:")
+        for term in sorted(glossary):
+            lines.append(f"- {term}: {_clean_markup(glossary[term])}")
 
     return "\n".join(lines).rstrip() + "\n"
 
@@ -91,13 +107,18 @@ def _enemy_line(enemy: dict[str, Any]) -> str:
 def _card_line(card: dict[str, Any]) -> str:
     traits = [
         f"[{_value(card.get('card_index'))}] {card.get('card_name') or 'Card'}",
-        f"cost {card.get('cost')}",
-        "playable",
     ]
-    if card.get("damage") is not None:
-        traits.append(f"damage {card['damage']}")
-    if card.get("block") is not None:
-        traits.append(f"block {card['block']}")
+    metadata = " ".join(str(value) for value in [card.get("rarity"), card.get("card_type")] if value)
+    if metadata:
+        traits.append(metadata)
+    traits.extend([f"cost {card.get('cost')}", "playable"])
+
+    text = card.get("resolved_rules_text") or card.get("text")
+    if not text:
+        if card.get("damage") is not None:
+            traits.append(f"damage {card['damage']}")
+        if card.get("block") is not None:
+            traits.append(f"block {card['block']}")
 
     target = "self"
     if card.get("requires_target"):
@@ -105,7 +126,21 @@ def _card_line(card: dict[str, Any]) -> str:
         target_ids = [f"enemy[{target['target_index']}]" for target in targets if target.get("target_index") is not None]
         target = ", ".join(target_ids) if target_ids else "enemy"
     traits.append(f"target {target}")
+    if text:
+        traits.append(_clean_markup(str(text)))
+    keywords = card.get("keywords") or []
+    if keywords:
+        traits.append(f"keywords {', '.join(str(keyword) for keyword in keywords)}")
     return " | ".join(traits)
+
+
+def _relic_line(relic: dict[str, Any]) -> str:
+    name = relic.get("name") or relic.get("relic_id") or "Relic"
+    prefix = f"[{_value(relic.get('index'))}] {name}"
+    description = relic.get("description")
+    if description:
+        return f"{prefix}: {_clean_markup(str(description))}"
+    return prefix
 
 
 def _action_signature(action: str, data: dict[str, Any]) -> str:
@@ -148,3 +183,7 @@ def _hp(hp: dict[str, Any]) -> str:
 
 def _value(value: Any) -> str:
     return "?" if value is None else str(value)
+
+
+def _clean_markup(text: str) -> str:
+    return re.sub(r"\[/?[A-Za-z0-9_#-]+\]", "", text)

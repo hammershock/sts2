@@ -37,8 +37,10 @@ def test_cli_state_defaults_to_text_view() -> None:
     assert result.stdout.startswith("COMBAT turn=2")
     assert "Player: HP 63/75, Block 4, Energy 3, Stars 1" in result.stdout
     assert "Incoming attack damage: 6" in result.stdout
+    assert "[0] Ring of the Snake: At the start of each combat, draw 2 additional cards." in result.stdout
     assert "[0] Cultist: HP 24/48, Block 0, Intents attack 6" in result.stdout
-    assert "[0] Strike | cost 1 | playable | damage 8 | target enemy[0]" in result.stdout
+    assert "[0] Strike | Basic Attack | cost 1 | playable | target enemy[0] | Deal 8 damage." in result.stdout
+    assert "- Block: Block prevents attack damage." in result.stdout
     assert "[0] play_card(card_index, target_index=0)" in result.stdout
     assert "[1] end_turn" in result.stdout
 
@@ -53,6 +55,11 @@ def test_cli_state_filtered_layer_outputs_json() -> None:
     payload = json.loads(result.stdout)
     assert payload["data"]["screen"] == "COMBAT"
     assert payload["data"]["combat"]["playable"][0]["card_name"] == "Strike"
+    assert payload["data"]["combat"]["playable"][0]["rarity"] == "Basic"
+    assert payload["data"]["combat"]["playable"][0]["card_type"] == "Attack"
+    assert payload["data"]["combat"]["playable"][0]["resolved_rules_text"] == "Deal 8 damage."
+    assert payload["data"]["relics"][0]["name"] == "Ring of the Snake"
+    assert payload["data"]["glossary"]["Block"] == "Block prevents attack damage."
 
 
 @respx.mock

@@ -68,6 +68,8 @@ class Card(BaseModel):
     index: int | None = None
     card_id: str | None = None
     name: str | None = None
+    card_type: str | None = None
+    rarity: str | None = None
     upgraded: bool | None = None
     target_type: str | None = None
     requires_target: bool | None = None

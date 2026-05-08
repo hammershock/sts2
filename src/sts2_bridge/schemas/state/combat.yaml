@@ -50,6 +50,10 @@ fields:
             index: index
             name: name
             card_id: card_id
+            card_type:
+              transform: card_type
+            rarity:
+              transform: card_rarity
             upgraded: upgraded
             energy_cost: energy_cost
             star_cost: star_cost
@@ -57,8 +61,11 @@ fields:
             target_type: target_type
             playable: playable
             unplayable_reason: unplayable_reason
+            resolved_rules_text: resolved_rules_text
             text:
               transform: card_text
+            keywords:
+              transform: card_keywords
       playable_cards:
         list: combat.hand
         where: playable

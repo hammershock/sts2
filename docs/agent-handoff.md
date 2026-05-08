@@ -148,6 +148,7 @@ Re-read `sts2 state` before acting, because the user may have played manually.
 2. Schema-driven state filtering:
    - YAML schemas live under `src/sts2_bridge/schemas/state/`.
    - The default COMBAT view is concise text built from filtered schema output.
+   - The default COMBAT view includes current relics, playable card rarity/type, resolved card rules text, and the current glossary exposed by the mod.
    - `--view decision`, `--view combat`, and `--view agent` expose progressively richer filtered views.
    - `--raw` remains opt-in for parser/debug work.
 

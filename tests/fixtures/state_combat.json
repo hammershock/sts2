@@ -88,7 +88,57 @@
     },
     "run": {
       "floor": 3,
-      "gold": 99
+      "gold": 99,
+      "deck": [
+        {
+          "card_id": "Strike",
+          "name": "Strike",
+          "card_type": "Attack",
+          "rarity": "Basic",
+          "upgraded": false,
+          "resolved_rules_text": "Deal 8 damage."
+        },
+        {
+          "card_id": "Defend",
+          "name": "Defend",
+          "card_type": "Skill",
+          "rarity": "Basic",
+          "upgraded": false,
+          "resolved_rules_text": "Gain 5 Block."
+        }
+      ],
+      "relics": [
+        {
+          "description": "At the start of each combat, draw [blue]2[/blue] additional cards.",
+          "index": 0,
+          "is_melted": false,
+          "name": "Ring of the Snake",
+          "relic_id": "RING_OF_THE_SNAKE",
+          "stack": null
+        }
+      ]
+    },
+    "agent_view": {
+      "glossary": {
+        "Block": "Block prevents attack damage.",
+        "Weak": "Weak creatures deal less attack damage."
+      },
+      "combat": {
+        "hand": [
+          {
+            "i": 0,
+            "keywords": [],
+            "line": "Strike [1]: Deal 8 damage."
+          },
+          {
+            "i": 1,
+            "keywords": [
+              "Block"
+            ],
+            "line": "Defend [1]: Gain 5 Block."
+          }
+        ]
+      }
     }
   }
 }

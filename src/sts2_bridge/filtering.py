@@ -119,6 +119,14 @@ def _transform(root: Any, current: Any, rule: Schema, state: Any) -> Any:
         return {"current": _get_path(current, paths[0]), "max": _get_path(current, paths[1])}
     if name == "card_text":
         return _get_path(current, "resolved_rules_text") or _get_path(current, "rules_text")
+    if name == "card_type":
+        return _card_field(root, current, "card_type")
+    if name == "card_rarity":
+        return _card_field(root, current, "rarity")
+    if name == "card_keywords":
+        return _card_keywords(root, current)
+    if name == "relics":
+        return _relics(root)
     if name == "incoming_damage":
         if isinstance(root, GameState):
             return estimate_incoming_damage(root)
@@ -149,12 +157,18 @@ def _transform(root: Any, current: Any, rule: Schema, state: Any) -> Any:
 def _card_action(root: Any, card: Any) -> dict[str, Any] | None:
     if not isinstance(card, Card):
         return None
+    text = card.resolved_rules_text or card.rules_text
     action: dict[str, Any] = {
         "action": "play_card",
         "card_index": card.index,
         "card_name": card.name,
+        "card_type": _card_field(root, card, "card_type"),
+        "rarity": _card_field(root, card, "rarity"),
         "requires_target": card.requires_target,
         "cost": card.energy_cost,
+        "resolved_rules_text": card.resolved_rules_text,
+        "text": text,
+        "keywords": _card_keywords(root, card),
     }
     damage = _card_damage(card)
     block = _card_block(card)
@@ -165,6 +179,83 @@ def _card_action(root: Any, card: Any) -> dict[str, Any] | None:
     if card.requires_target:
         action["valid_targets"] = _transform(root, card, {"transform": "valid_targets"}, root)
     return action
+
+
+def _card_field(root: Any, card: Any, field: str) -> Any:
+    direct_value = _get_path(card, field)
+    if direct_value is not None:
+        return direct_value
+    if not isinstance(card, Card) or not card.card_id:
+        return None
+
+    for candidate in _run_cards(root):
+        if not isinstance(candidate, dict):
+            continue
+        if candidate.get("card_id") != card.card_id:
+            continue
+        if card.upgraded is not None and candidate.get("upgraded") not in {None, card.upgraded}:
+            continue
+        value = candidate.get(field)
+        if value is not None:
+            return value
+    return None
+
+
+def _card_keywords(root: Any, card: Any) -> list[str]:
+    direct_value = _get_path(card, "keywords")
+    if isinstance(direct_value, list):
+        return [str(item) for item in direct_value if item]
+
+    index = _get_path(card, "index")
+    hand = _get_path(root, "agent_view.combat.hand")
+    if isinstance(hand, list):
+        for item in hand:
+            if not isinstance(item, dict) or item.get("i") != index:
+                continue
+            keywords = item.get("keywords")
+            if isinstance(keywords, list):
+                return [str(keyword) for keyword in keywords if keyword]
+    return []
+
+
+def _run_cards(root: Any) -> list[dict[str, Any]]:
+    cards: list[dict[str, Any]] = []
+    paths = [
+        "run.deck",
+        "run.piles.draw_cards",
+        "run.piles.discard_cards",
+        "run.piles.exhaust_cards",
+    ]
+    for path in paths:
+        items = _get_path(root, path)
+        if isinstance(items, list):
+            cards.extend(item for item in items if isinstance(item, dict))
+    return cards
+
+
+def _relics(root: Any) -> list[dict[str, Any]]:
+    items = _get_path(root, "run.relics")
+    if not isinstance(items, list):
+        return []
+
+    relics: list[dict[str, Any]] = []
+    for index, item in enumerate(items):
+        if isinstance(item, str):
+            relics.append({"index": index, "name": item})
+            continue
+        if not isinstance(item, dict):
+            continue
+        relics.append(
+            {
+                "index": item.get("index", index),
+                "name": item.get("name"),
+                "relic_id": item.get("relic_id"),
+                "description": item.get("description"),
+                "stack": item.get("stack"),
+                "is_melted": item.get("is_melted"),
+            }
+        )
+    return relics
 
 
 def _summary(state: GameState) -> str:

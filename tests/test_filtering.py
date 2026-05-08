@@ -28,6 +28,11 @@ def test_filter_state_extracts_chinese_card_numbers_on_real_sample() -> None:
 
     assert any(card.get("damage") for card in playable)
     assert any(card.get("block") for card in playable)
+    assert any(card.get("card_type") for card in playable)
+    assert any(card.get("rarity") for card in playable)
+    assert any(card.get("resolved_rules_text") for card in playable)
+    assert view["relics"]
+    assert view["glossary"]
 
 
 def test_filter_state_extracts_multi_intents_on_real_sample() -> None:

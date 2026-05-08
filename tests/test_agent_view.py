@@ -30,17 +30,17 @@ def test_agent_view_keeps_decision_fields() -> None:
 def test_combat_view_lists_playable_targets() -> None:
     view = build_combat_view(load_state())
 
-    assert view["playable_cards"] == [
-        {
-            "action": "play_card",
-            "card_index": 0,
-            "card_name": "Strike",
-            "requires_target": True,
-            "cost": 1,
-            "damage": 8,
-            "valid_targets": [{"target_index": 0, "name": "Cultist"}],
-        }
-    ]
+    card = view["playable_cards"][0]
+    assert card["action"] == "play_card"
+    assert card["card_index"] == 0
+    assert card["card_name"] == "Strike"
+    assert card["requires_target"] is True
+    assert card["cost"] == 1
+    assert card["damage"] == 8
+    assert card["card_type"] == "Attack"
+    assert card["rarity"] == "Basic"
+    assert card["resolved_rules_text"] == "Deal 8 damage."
+    assert card["valid_targets"] == [{"target_index": 0, "name": "Cultist"}]
 
 
 def test_actions_view_adds_argument_hints() -> None:
@@ -56,17 +56,17 @@ def test_brief_view_filters_to_decision_summary() -> None:
 
     assert view["screen"] == "COMBAT"
     assert view["combat"]["incoming_damage"] == 6
-    assert view["combat"]["playable"] == [
-        {
-            "action": "play_card",
-            "card_index": 0,
-            "card_name": "Strike",
-            "requires_target": True,
-            "valid_targets": [{"target_index": 0, "name": "Cultist"}],
-            "damage": 8,
-            "cost": 1,
-        }
-    ]
+    card = view["combat"]["playable"][0]
+    assert card["action"] == "play_card"
+    assert card["card_index"] == 0
+    assert card["card_name"] == "Strike"
+    assert card["requires_target"] is True
+    assert card["valid_targets"] == [{"target_index": 0, "name": "Cultist"}]
+    assert card["damage"] == 8
+    assert card["cost"] == 1
+    assert card["card_type"] == "Attack"
+    assert card["rarity"] == "Basic"
+    assert card["resolved_rules_text"] == "Deal 8 damage."
     assert "hand" not in view["combat"]
     assert "incoming 6" in view["summary"]
 
