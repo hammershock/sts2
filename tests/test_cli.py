@@ -830,6 +830,53 @@ def test_cli_act_no_longer_synthesizes_state_deltas() -> None:
 
 
 @respx.mock
+def test_cli_act_routes_return_to_main_menu() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "request_id": "req_return_to_main_menu",
+                "data": {"action": "return_to_main_menu", "status": "completed", "stable": True},
+            },
+        )
+    )
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(200, json=fixture("state_game_over_death_victory_flag"))
+    )
+
+    result = runner.invoke(app, ["act", "return_to_main_menu", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": "return_to_main_menu"}
+    assert "Route: action/game_menu/return_to_main_menu/completed" in result.stdout
+    assert "Action: return_to_main_menu" in result.stdout
+
+
+@respx.mock
+def test_cli_act_routes_return_to_main_menu_by_visible_index() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "request_id": "req_return_to_main_menu",
+                "data": {"action": "return_to_main_menu", "status": "completed", "stable": True},
+            },
+        )
+    )
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(200, json=fixture("state_game_over_death_victory_flag"))
+    )
+
+    result = runner.invoke(app, ["act", "0", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": "return_to_main_menu"}
+    assert "Route: action/game_menu/return_to_main_menu/completed" in result.stdout
+
+
+@respx.mock
 def test_cli_act_blocks_resolve_rewards_when_card_reward_is_unloaded() -> None:
     route = respx.post(f"{BASE_URL}/action").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
