@@ -67,6 +67,8 @@ def _state_schema_name(state: GameState, view: str) -> str:
         return "state/event.yaml"
     if state.screen == "SHOP":
         return "state/shop.yaml"
+    if state.screen == "GAME_OVER":
+        return "state/game_over.yaml"
     return "state/common.yaml"
 
 
@@ -156,6 +158,8 @@ def _transform(root: Any, current: Any, rule: Schema, state: Any) -> Any:
         return _event_view(root)
     if name == "shop":
         return _shop_view(root)
+    if name == "game_over":
+        return _game_over_view(root)
     if name == "incoming_damage":
         if isinstance(root, GameState):
             return estimate_incoming_damage(root)
@@ -545,6 +549,53 @@ def _shop_card_removal(card_removal: Any) -> dict[str, Any]:
         "used": card_removal.get("used"),
         "affordable": card_removal.get("enough_gold"),
     }
+
+
+def _game_over_view(root: Any) -> dict[str, Any]:
+    game_over = _get_path(root, "game_over")
+    if not isinstance(game_over, dict):
+        return {}
+
+    player = _local_player(root)
+    hp = _player_hp(player)
+    is_dead = _player_is_dead(player, hp)
+    api_victory = game_over.get("is_victory")
+    result = "death" if is_dead else ("victory" if api_victory is True else "unknown")
+    return {
+        "result": result,
+        "api_is_victory": api_victory,
+        "result_reason": "player_hp_zero" if is_dead else None,
+        "floor": game_over.get("floor") or _get_path(root, "run.floor"),
+        "character": game_over.get("character_id") or _get_path(root, "run.character_id"),
+        "player_hp": hp,
+        "player_alive": None if player is None else player.get("is_alive"),
+        "can_continue": game_over.get("can_continue"),
+        "can_return_to_main_menu": game_over.get("can_return_to_main_menu"),
+        "showing_summary": game_over.get("showing_summary"),
+    }
+
+
+def _local_player(root: Any) -> dict[str, Any] | None:
+    players = _get_path(root, "run.players")
+    if not isinstance(players, list):
+        return None
+    dict_players = [player for player in players if isinstance(player, dict)]
+    for player in dict_players:
+        if player.get("is_local"):
+            return player
+    return dict_players[0] if dict_players else None
+
+
+def _player_hp(player: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(player, dict):
+        return {}
+    return {"current": player.get("current_hp"), "max": player.get("max_hp")}
+
+
+def _player_is_dead(player: dict[str, Any] | None, hp: dict[str, Any]) -> bool:
+    if not isinstance(player, dict):
+        return False
+    return player.get("is_alive") is False or hp.get("current") == 0
 
 
 def _indexed_agent_lines(items: Any) -> dict[int, str]:

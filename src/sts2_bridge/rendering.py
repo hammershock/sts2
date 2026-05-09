@@ -19,6 +19,8 @@ def render_state_view(data: dict[str, Any]) -> str:
         return render_event_view(data)
     if data.get("screen") == "SHOP" and isinstance(data.get("shop"), dict):
         return render_shop_view(data)
+    if data.get("screen") == "GAME_OVER" and isinstance(data.get("game_over"), dict):
+        return render_game_over_view(data)
     return render_generic_view(data)
 
 
@@ -261,6 +263,29 @@ def render_shop_view(data: dict[str, Any]) -> str:
         lines.extend(["", "Potions:"])
         for potion in potions:
             lines.append(_shop_item_line(potion))
+
+    actions = data.get("available_actions") or []
+    if actions:
+        lines.extend(["", "Legal actions:"])
+        for index, action in enumerate(actions):
+            lines.append(f"[{index}] {_action_signature(action, data)}")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def render_game_over_view(data: dict[str, Any]) -> str:
+    game_over = data["game_over"]
+    lines = [_header_line(data), f"Result: {game_over.get('result') or 'unknown'}"]
+    hp = game_over.get("player_hp") or {}
+    details = [
+        f"floor {_value(game_over.get('floor'))}",
+        f"character {_value(game_over.get('character'))}",
+        f"HP {_hp(hp)}",
+        f"alive {str(game_over.get('player_alive')).lower()}",
+    ]
+    lines.append(f"Final: {', '.join(details)}")
+    if game_over.get("result") == "death" and game_over.get("api_is_victory") is True:
+        lines.append("Note: API victory flag ignored because player HP is 0/dead.")
 
     actions = data.get("available_actions") or []
     if actions:

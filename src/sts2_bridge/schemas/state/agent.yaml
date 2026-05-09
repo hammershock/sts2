@@ -12,4 +12,5 @@ fields:
   rest: rest
   character_select: character_select
   modal: modal
-  game_over: game_over
+  game_over:
+    transform: game_over

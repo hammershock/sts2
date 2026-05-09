@@ -163,6 +163,7 @@ Re-read `sts2 state` before acting, because the user may have played manually.
    - The default SHOP view includes open inventory cards/relics/potions, true option indices, prices, affordability, sale flags, and card-removal price.
    - The default REWARD view includes reward rows, claimable flags, card choices, skip alternatives, and a warning when a claimable Card reward exists but card choices are not loaded yet.
    - The default CARD_SELECTION view includes the prompt, selection constraints, indexed candidate cards, card rarity/type/cost/rules text, and legal actions.
+   - The default GAME_OVER view includes an explicit result. Player HP 0 / `is_alive=false` is treated as death even if the backend exposes a confusing victory flag.
    - REST screens use API-provided progress actions when available. If the mod reports REST without a rest-progress action, even if unrelated actions like `discard_potion` exist, the CLI shows marked recovery options instead of fake legal HTTP actions.
    - `sts2 act resolve_rewards` and `sts2 act collect_rewards_and_proceed` are guarded when a claimable Card reward exists but card choices are not loaded. Claim the Card reward first to expose choices.
    - `--view decision`, `--view combat`, and `--view agent` expose progressively richer filtered views.
@@ -172,6 +173,7 @@ Re-read `sts2 state` before acting, because the user may have played manually.
    - YAML schemas live under `src/sts2_bridge/schemas/action/`.
    - Default `sts2 act` renders `status`, action args, compact post-action state, and before/after deltas as text.
    - After a successful action POST, `sts2 act` refreshes `/state` and renders that fresh state when available, instead of trusting possibly stale state embedded in the action response.
+   - `sts2 act` polls past brief bogus COMBAT transition states with unknown player fields, and enemy death deltas include terminal values plus `defeated: true`.
    - `--raw-result` preserves full action-result inspection mode, rendered as text.
 
 4. Real HTTP samples:

@@ -149,7 +149,7 @@ def act(
         _validate_action_against_state(resolved_action, before)
         result = client.act(resolved_action, args)
         embedded_after = result.state if isinstance(result.state, GameState) else None
-        after = _try_state(client) or embedded_after
+        after = _fresh_state_after_action(client, embedded_after)
         if not raw_result:
             return _render_action_result(
                 build_action_result_view(
@@ -811,6 +811,33 @@ def _try_state(client: Sts2Client) -> GameState | None:
         return client.state()
     except BridgeError:
         return None
+
+
+def _fresh_state_after_action(client: Sts2Client, fallback: GameState | None) -> GameState | None:
+    last_state: GameState | None = None
+    for attempt in range(4):
+        state = _try_state(client)
+        if state is None:
+            return fallback if last_state is None else last_state
+        last_state = state
+        if not _looks_like_transition_state(state):
+            return state
+        if attempt < 3:
+            time.sleep(0.15)
+    return last_state or fallback
+
+
+def _looks_like_transition_state(state: GameState) -> bool:
+    if state.screen != "COMBAT" or state.combat is None:
+        return False
+    if effective_available_actions(state):
+        return False
+    player = state.combat.player
+    if player is None:
+        return True
+    unknown_player = player.current_hp is None and player.max_hp is None and player.energy is None and player.block is None
+    no_combat_content = not state.combat.enemies and not state.combat.hand
+    return unknown_player and no_combat_content
 
 
 def _macos_window_status_or_error() -> dict[str, Any]:

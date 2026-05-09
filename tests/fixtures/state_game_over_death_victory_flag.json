@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "data": {
+    "state_version": 9,
+    "run_id": "seed-game-over",
+    "screen": "GAME_OVER",
+    "in_combat": false,
+    "available_actions": ["return_to_main_menu"],
+    "run": {
+      "floor": 48,
+      "gold": 49,
+      "character_id": "SILENT",
+      "players": [
+        {
+          "player_id": "1",
+          "slot_index": 0,
+          "is_local": true,
+          "character_id": "SILENT",
+          "current_hp": 0,
+          "max_hp": 80,
+          "gold": 49,
+          "is_alive": false
+        }
+      ]
+    },
+    "game_over": {
+      "is_victory": true,
+      "floor": 48,
+      "character_id": "SILENT",
+      "can_continue": true,
+      "can_return_to_main_menu": true,
+      "showing_summary": false
+    }
+  }
+}

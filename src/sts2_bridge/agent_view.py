@@ -143,21 +143,37 @@ def _enemy_delta(before: Enemy | None, after: Enemy | None) -> dict[str, Any]:
     if reference is None:
         return {}
     delta = {"index": reference.index, "name": reference.name}
-    delta.update(_field_delta(before, after, ("current_hp", "block", "is_alive")))
+    if before is not None and after is None:
+        delta.update(
+            _field_delta(
+                before,
+                {"current_hp": 0, "block": 0, "is_alive": False},
+                ("current_hp", "block", "is_alive"),
+            )
+        )
+        delta["defeated"] = True
+    else:
+        delta.update(_field_delta(before, after, ("current_hp", "block", "is_alive")))
     return _clean(delta) if len(delta) > 2 else {}
 
 
 def _field_delta(before: Any, after: Any, fields: tuple[str, ...]) -> dict[str, Any]:
     delta: dict[str, Any] = {}
     for field in fields:
-        before_value = getattr(before, field, None)
-        after_value = getattr(after, field, None)
+        before_value = _field_value(before, field)
+        after_value = _field_value(after, field)
         if before_value != after_value:
             change: dict[str, Any] = {"from": before_value, "to": after_value}
-            if isinstance(before_value, int) and isinstance(after_value, int):
+            if type(before_value) is int and type(after_value) is int:
                 change["delta"] = after_value - before_value
             delta[field] = change
     return delta
+
+
+def _field_value(value: Any, field: str) -> Any:
+    if isinstance(value, dict):
+        return value.get(field)
+    return getattr(value, field, None)
 
 
 def _hand_signature(cards: list[Card]) -> list[dict[str, Any]]:

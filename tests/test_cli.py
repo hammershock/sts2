@@ -134,6 +134,22 @@ def test_cli_state_renders_open_shop_inventory() -> None:
 
 
 @respx.mock
+def test_cli_state_renders_game_over_death_even_with_victory_flag() -> None:
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(200, json=fixture("state_game_over_death_victory_flag"))
+    )
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("GAME_OVER floor=48 gold=49")
+    assert "Result: death" in result.stdout
+    assert "Final: floor 48, character SILENT, HP 0/80, alive false" in result.stdout
+    assert "API victory flag ignored" in result.stdout
+    assert "[0] return_to_main_menu" in result.stdout
+
+
+@respx.mock
 def test_cli_state_renders_card_selection_options() -> None:
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_card_selection")))
 
@@ -467,6 +483,107 @@ def test_cli_act_refreshes_state_instead_of_using_stale_action_state() -> None:
     assert result.exit_code == 0
     assert "[1] Blade Dance" in result.stdout
     assert "[2] Blade Dance" not in result.stdout
+
+
+@respx.mock
+def test_cli_act_polls_past_bogus_transition_combat_state() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
+    )
+    before_state = {
+        "ok": True,
+        "data": {
+            "screen": "REWARD",
+            "available_actions": ["collect_rewards_and_proceed"],
+            "run": {"floor": 48, "gold": 49},
+            "reward": {"pending_card_choice": False, "can_proceed": True, "rewards": [], "card_options": []},
+        },
+    }
+    bogus_transition = {
+        "ok": True,
+        "data": {
+            "screen": "COMBAT",
+            "in_combat": False,
+            "available_actions": [],
+            "run": {"floor": 48, "gold": 49},
+            "combat": {"player": {}, "hand": [], "enemies": []},
+        },
+    }
+    final_event = {
+        "ok": True,
+        "data": {
+            "screen": "EVENT",
+            "available_actions": ["choose_event_option"],
+            "run": {"floor": 48, "gold": 49},
+            "event": {
+                "event_id": "THE_ARCHITECT",
+                "title": "建筑师",
+                "options": [{"index": 0, "title": "继续", "description": "", "is_proceed": True}],
+            },
+        },
+    }
+    respx.get(f"{BASE_URL}/state").mock(
+        side_effect=[
+            httpx.Response(200, json=before_state),
+            httpx.Response(200, json=bogus_transition),
+            httpx.Response(200, json=final_event),
+        ]
+    )
+
+    result = runner.invoke(app, ["act", "collect_rewards_and_proceed", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert route.called
+    assert "State:\nEVENT floor=48 gold=49" in result.stdout
+    assert "Event: 建筑师 (THE_ARCHITECT)" in result.stdout
+    assert "Player: HP ?/?" not in result.stdout
+
+
+@respx.mock
+def test_cli_act_enemy_death_delta_includes_terminal_values() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
+    )
+    before_state = {
+        "ok": True,
+        "data": {
+            "screen": "COMBAT",
+            "in_combat": True,
+            "available_actions": ["play_card"],
+            "run": {"floor": 48, "gold": 49},
+            "combat": {
+                "player": {"current_hp": 10, "max_hp": 80, "block": 0, "energy": 1},
+                "hand": [{"index": 0, "name": "突然一拳", "playable": True, "energy_cost": 1}],
+                "enemies": [{"index": 0, "name": "女王", "current_hp": 11, "max_hp": 300, "block": 0, "is_alive": True}],
+            },
+        },
+    }
+    after_state = {
+        "ok": True,
+        "data": {
+            "screen": "REWARD",
+            "in_combat": False,
+            "available_actions": ["collect_rewards_and_proceed"],
+            "run": {"floor": 48, "gold": 49},
+            "reward": {"pending_card_choice": False, "can_proceed": True, "rewards": [], "card_options": []},
+        },
+    }
+    respx.get(f"{BASE_URL}/state").mock(
+        side_effect=[httpx.Response(200, json=before_state), httpx.Response(200, json=after_state)]
+    )
+
+    result = runner.invoke(app, ["act", "play_card", "0", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert route.called
+    assert "current_hp:" in result.stdout
+    assert "from: 11" in result.stdout
+    assert "to: 0" in result.stdout
+    assert "delta: -11" in result.stdout
+    assert "is_alive:" in result.stdout
+    assert "from: true" in result.stdout
+    assert "to: false" in result.stdout
+    assert "defeated: true" in result.stdout
 
 
 @respx.mock

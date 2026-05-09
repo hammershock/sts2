@@ -1,0 +1,4 @@
+extends: state/common.yaml
+fields:
+  game_over:
+    transform: game_over

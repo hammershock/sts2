@@ -61,6 +61,7 @@ Default `sts2 state` is the Agent view. Prefer it over raw payloads.
 - MAP shows current position, choices, key reachable nodes, and a compact reachable map.
 - EVENT shows the event title, event text, indexed option titles/descriptions, and option flags.
 - SHOP shows open/closed status, stocked cards/relics/potions, prices, affordability, sale flags, and card removal price when inventory is open.
+- GAME_OVER shows an explicit `Result`. Treat `Result: death` as a failed run even if the visible death prompt says `胜利...?`.
 - COMBAT also includes powers, piles, deck, and potions when the mod exposes them. Prefer this compact view over raw state for tactical decisions.
 - REWARD shows reward rows, card choices, and skip alternatives. If a Card reward says choices are not loaded, claim that Card reward first; `resolve_rewards` may skip unresolved card rewards.
 - CARD_SELECTION shows the prompt, selection constraints, and indexed candidate cards. Use the shown option index with `select_deck_card`.
@@ -90,6 +91,9 @@ The engineering agent has already addressed these feedback items:
 - REWARD view now lists reward rows, card choices, alternatives, and warns when `resolve_rewards` may skip an unopened card reward. The CLI also blocks `resolve_rewards` / `collect_rewards_and_proceed` until claimable Card reward choices are visible.
 - EVENT view now lists the event title, text, and every option with its true `option_index`.
 - SHOP view now lists open inventory items with true option indices, prices, affordability, sale status, and card-removal price.
+- GAME_OVER view now distinguishes death from victory by prioritizing player HP/is_alive over the backend victory flag.
+- `sts2 act` now polls past brief bogus COMBAT transition states with unknown player fields after reward/end-of-run transitions.
+- Enemy death diffs now include terminal values such as `to: 0`, `to: false`, and `defeated: true`.
 - `sts2 act` now ignores stale embedded post-action state when a fresh `/state` read is available, reducing stale hand-index risk after discard/card-selection effects.
 - CARD_SELECTION view now lists the prompt, selection constraints, indexed candidate cards, and legal actions.
 - REST screens use API actions when available. If the API reports REST with no rest-progress action, even if it still exposes unrelated actions such as `discard_potion`, CLI view exposes marked Recovery options, not fake Legal actions.
