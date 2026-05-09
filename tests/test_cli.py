@@ -347,7 +347,8 @@ def test_cli_state_renders_reward_rows_and_unloaded_card_note() -> None:
     assert "Reward: pending_card_choice=false, can_proceed=true" in result.stdout
     assert "[0] Gold: 17金币" in result.stdout
     assert "[1] Card: 将一张牌添加到你的牌组。" in result.stdout
-    assert "[0] sts2 act resolve_rewards" in result.stdout
+    assert "[0] sts2 act resolve_rewards [unavailable, use sts2 act claim_reward 1 instead]" in result.stdout
+    assert "[1] sts2 act collect_rewards_and_proceed [unavailable, use sts2 act claim_reward 1 instead]" in result.stdout
     assert "[2] sts2 act claim_reward <option_index in 0, 1>" in result.stdout
 
 
