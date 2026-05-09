@@ -47,6 +47,8 @@ ACTION_DOMAINS = {
     "return_to_main_menu": "game_menu",
     "open_character_select": "character_select",
     "select_character": "character_select",
+    "increase_ascension": "character_select",
+    "decrease_ascension": "character_select",
     "embark": "character_select",
     "proceed": "navigation",
 }

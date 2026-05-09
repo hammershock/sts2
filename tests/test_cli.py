@@ -943,6 +943,48 @@ def test_cli_act_routes_open_character_select_by_visible_index() -> None:
     assert "Route: action/character_select/open_character_select/completed" in result.stdout
 
 
+@pytest.mark.parametrize("action", ["increase_ascension", "decrease_ascension"])
+@respx.mock
+def test_cli_act_routes_character_select_ascension_actions(action: str) -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "request_id": f"req_{action}",
+                "data": {"action": action, "status": "completed", "stable": True},
+            },
+        )
+    )
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "data": {
+                    "screen": "CHARACTER_SELECT",
+                    "available_actions": ["close_main_menu_submenu", "select_character", "embark", action],
+                    "character_select": {
+                        "selected_character_id": "SILENT",
+                        "can_embark": True,
+                        "ascension": 1,
+                        "player_count": 1,
+                        "max_players": 1,
+                        "characters": [{"index": 2, "character_id": "SILENT", "name": "静默猎手", "is_selected": True}],
+                    },
+                },
+            },
+        )
+    )
+
+    result = runner.invoke(app, ["act", action, "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": action}
+    assert f"Route: action/character_select/{action}/completed" in result.stdout
+    assert f"Action: {action}" in result.stdout
+
+
 @respx.mock
 def test_cli_act_blocks_resolve_rewards_when_card_reward_is_unloaded() -> None:
     route = respx.post(f"{BASE_URL}/action").mock(
