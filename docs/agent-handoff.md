@@ -4,9 +4,9 @@ This file is the compact starting context for future agents working on this repo
 
 ## Current Purpose
 
-`sts2-bridge` is a local CLI bridge for Slay the Spire 2 agents. It talks to the STS2-Agent mod HTTP server and exposes three state layers: raw HTTP-derived data, schema-filtered data, and human-readable Agent views.
+`sts2-bridge` is a local CLI bridge for Slay the Spire 2 agents. It talks to the STS2-Agent mod HTTP server, routes raw `/state` and `/action` JSON responses, and renders compact human-readable Agent views.
 
-The bridge is basically usable and now has the first harness layer: YAML schema-driven filtering for state/action HTTP payloads. Policy, planner, and benchmark work are intentionally deferred until the filter layer is stable.
+The bridge is basically usable and now has the first harness layer: schema-assisted routing plus per-route renderers for state/action HTTP payloads. Policy, planner, and benchmark work are intentionally deferred until the routed view layer is stable.
 
 ## Local Setup
 
@@ -68,7 +68,7 @@ Important argument names discovered by real play:
 
 The preferred action syntax is `sts2 act ACTION_OR_INDEX [positional_args...] [--field value ...]`. The first argument can be a canonical action name, an alias without separators such as `playcard`, or a numbered action from the current `Legal actions` list. Positional args are mapped by action, for example `play_card 0 0` means `card_index=0,target_index=0`.
 
-Actions displayed with `option_index=0`, including `choose_map_node(option_index=0)`, default to `option_index=0` when no explicit option is passed. This makes `sts2 act 0` match the visible legal action when the only shown action is `[0] choose_map_node(option_index=0)`.
+Actions displayed with a concrete default such as `option_index=0` have exactly one valid choice and can be run without an explicit option. Actions displayed as `option_index in 0, 1, 2` require an explicit option, such as `sts2 act choose_event_option 1` or `sts2 act choose_event_option --option_index 1`; omitted arguments are rejected before the HTTP POST when the state is ambiguous.
 
 When an invalid arg name is used, the mod often returns a useful message such as `requires option_index`.
 
@@ -79,12 +79,10 @@ Use compact views by default:
 ```bash
 sts2
 sts2 state
-sts2 state --layer filtered
-sts2 state --layer raw
-sts2 state --view decision --layer filtered
-sts2 actions
+sts2 state --raw
 sts2 wait --timeout 15
 sts2 debug health
+sts2 debug route-render-samples
 ```
 
 No-arg `sts2` starts an interactive mode only when stdin/stdout are TTYs. In non-TTY agent execution it prints help. Interactive keys: digits choose map/reward/card-selection options or play combat cards, `e` ends the turn, `c` collects rewards and proceeds, `r` resolves rewards, Enter refreshes or takes the only unambiguous non-card action, `?` shows help, and `q` quits.
@@ -105,7 +103,6 @@ sts2 act choose_map_node 0
 Window and screenshot debugging:
 
 ```bash
-sts2 state --with-window
 sts2 debug window-status
 sts2 debug windows
 sts2 debug click-window 0.5 0.4 --normalized --dry-run
@@ -147,39 +144,39 @@ Re-read `sts2 state` before acting, because the user may have played manually.
 - Full raw output is very expensive. Prefer compact summaries and omit deck/map internals unless directly needed.
 - Screenshot and click fallback are only debugging/recovery tools. The structured mod state should be primary.
 
-## Implemented Filter Layer
+## Implemented Route-Based View Layer
 
-1. Three state layers:
-   - `raw`: full parsed HTTP state rendered as text, exposed by `sts2 state --layer raw` or `--raw`.
-   - `filtered`: YAML schema-filtered state rendered as text, exposed by `sts2 state --layer filtered`.
-   - `view`: default human-readable text, exposed by `sts2 state`.
+1. State output:
+   - `sts2 state`: fetches `/state`, routes the raw HTTP JSON by game state, and renders a compact human-readable view.
+   - `sts2 state --raw`: prints the raw parsed `/state` HTTP JSON response.
+   - The view layer is only a compact rendering of raw response fields. It does not inject window state or other external observations.
 
-2. Schema-driven state filtering:
-   - YAML schemas live under `src/sts2_bridge/schemas/state/`.
-   - The default COMBAT view is concise text built from filtered schema output.
-   - The default COMBAT view includes current relics, player/enemy powers, playable card rarity/type, resolved card rules text, piles, deck, potions, and the current glossary exposed by the mod.
+2. State routes and renderers:
+   - Route schemas and HTTP samples live under `samples/http/20260508/`.
+   - State renderers live under `src/sts2_bridge/state_view/`.
+   - The default COMBAT view includes player/enemy state, intents, playable hand, legal actions, piles when exposed, and current glossary entries.
    - The default MAP view includes current position, indexed path choices, key reachable elite/rest/shop/treasure nodes, and a compact row-by-row reachable map.
    - The default EVENT view includes title, description text, every option index, option title/description, and important flags such as locked/proceed/kill/relic preview.
    - The default SHOP view includes open inventory cards/relics/potions, true option indices, prices, affordability, sale flags, and card-removal price.
    - The default REWARD view includes reward rows, claimable flags, card choices, skip alternatives, and a warning when a claimable Card reward exists but card choices are not loaded yet.
    - The default CARD_SELECTION view includes the prompt, selection constraints, indexed candidate cards, card rarity/type/cost/rules text, and legal actions.
+   - CHARACTER_SELECT, MAIN_MENU timeline, MAIN_MENU, CAPSTONE_SELECTION, and GAME_OVER have separate routes and renderers.
    - The default GAME_OVER view includes an explicit result. Player HP 0 / `is_alive=false` is treated as death even if the backend exposes a confusing victory flag.
-   - REST screens use API-provided progress actions when available. If the mod reports REST without a rest-progress action, even if unrelated actions like `discard_potion` exist, the CLI shows marked recovery options instead of fake legal HTTP actions.
+   - REST screens render only raw/API-provided legal actions.
    - `sts2 act resolve_rewards` and `sts2 act collect_rewards_and_proceed` are guarded when a claimable Card reward exists but card choices are not loaded. Claim the Card reward first to expose choices.
-   - `--view decision`, `--view combat`, and `--view agent` expose progressively richer filtered views.
    - `--raw` remains opt-in for parser/debug work.
 
-3. Filtered action results:
-   - YAML schemas live under `src/sts2_bridge/schemas/action/`.
-   - Default `sts2 act` renders `status`, action args, compact post-action state, and before/after deltas as text.
-   - After a successful action POST, `sts2 act` refreshes `/state` and renders that fresh state when available, instead of trusting possibly stale state embedded in the action response.
-   - `sts2 act` polls past brief bogus COMBAT transition states with unknown player fields, and enemy death deltas include terminal values plus `defeated: true`.
-   - `--raw-result` preserves full action-result inspection mode, rendered as text.
+3. Routed action results:
+   - Action renderers live under `src/sts2_bridge/action_view/`.
+   - Default `sts2 act` renders the routed `/action` response by action domain and outcome: completed, pending, transport error, or API error.
+   - Pending action responses render embedded state when the HTTP response contains one.
+   - `sts2 act` completes omitted `option_index` and `target_index` only when exactly one valid value is visible in the filtered state. If multiple values are available, it raises `ambiguous_action_args` and does not send a POST.
+   - `--raw-result` preserves raw action-result inspection mode.
 
 4. Real HTTP samples:
-   - Raw envelopes live under `samples/http/health`, `samples/http/state`, and `samples/http/action`.
-   - Current samples cover health, Neow event, map, choose map node, combat states, play card, and end turn.
-   - These samples are regression inputs for filtering behavior.
+   - Legacy flat fixtures remain under `samples/http/health` and `samples/http/state` for older tests.
+   - The routed 20260508 corpus under `samples/http/20260508/` contains representative raw envelopes, schemas, a manifest, and summaries.
+   - `sts2 debug route-render-samples` regenerates ignored human-readable render samples under `debug/route_render_samples/` from `logs/http/`.
 
 5. Runtime traces:
    - Project-level `logs/` is gitignored.

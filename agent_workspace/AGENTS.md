@@ -68,15 +68,16 @@ Default `sts2 state` is the Agent view. Prefer it over raw payloads.
 - REST normally shows legal actions from the mod. If it shows Recovery options, the API omitted executable rest actions; do not run `sts2 act` for those options. Use `sts2 debug recover-rest` for the known post-rest desync; use screenshot plus `debug click-window` only for other visible UI recovery.
 - Other screens may be less detailed; use legal actions and concise state text first.
 
-Avoid `--layer raw` unless debugging the bridge. Raw output is large and expensive.
+Avoid `--raw` unless debugging the bridge. Raw output is large and expensive.
 
 ## Action Rules
 
 - Re-read `sts2 state` after every action. Card indices and legal actions can change immediately.
 - Do not chain card actions from stale hand data.
-- `sts2 act` now refreshes post-action state with a fresh `/state` read before rendering, but still prefer re-reading state before each separate decision.
+- `sts2 act` renders the routed `/action` response. Prefer re-reading state before each separate decision.
 - Use numbered legal actions when possible.
-- Actions displayed as `option_index=0` can be run without extra args, for example `sts2 act 0`.
+- Actions displayed as `option_index=N` have exactly one valid choice and can be run without extra args, for example `sts2 act 0`.
+- Actions displayed as `option_index in 0, 1, 2` are ambiguous without an explicit option. Use `sts2 act ACTION N` or `sts2 act ACTION --option_index N`.
 - Shop and potion actions use `option_index`, for example `sts2 act buy_card 4` or `sts2 act use_potion 0`.
 - On REWARD, if a Card reward exists but choices are not loaded, run `sts2 act claim_reward --option_index N` for that Card reward first. The CLI blocks `resolve_rewards` and `collect_rewards_and_proceed` in this unsafe state.
 - If a card requires a target and only one valid enemy target is shown, `sts2 act play_card CARD_INDEX` usually works through CLI defaults; explicit `target_index` is also fine.
@@ -96,6 +97,9 @@ The engineering agent has already addressed these feedback items:
 - Enemy death diffs now include terminal values such as `to: 0`, `to: false`, and `defeated: true`.
 - `sts2 act` now ignores stale embedded post-action state when a fresh `/state` read is available, reducing stale hand-index risk after discard/card-selection effects.
 - CARD_SELECTION view now lists the prompt, selection constraints, indexed candidate cards, and legal actions.
+- CHARACTER_SELECT, MAIN_MENU timeline, MAIN_MENU, and CAPSTONE_SELECTION now have explicit routes instead of falling through to unknown.
+- MAIN_MENU timeline view now lists epoch slots with option indices, titles, state, and actionability.
+- Legal action signatures now only show default argument values when there is exactly one valid choice. Multi-choice actions render `option_index in ...`, and `sts2 act` rejects omitted option indices in ambiguous states.
 - REST screens use API actions when available. If the API reports REST with no rest-progress action, even if it still exposes unrelated actions such as `discard_potion`, CLI view exposes marked Recovery options, not fake Legal actions.
 - REST recovery states now print `Recovery command: sts2 debug recover-rest` directly in `sts2 state`.
 - macOS `window-status`, screenshot, and YAML output now normalize PyObjC string subclasses and should not dump large tracebacks for ordinary CLI errors.

@@ -27,18 +27,15 @@ python -m pip install -e ".[dev]"
 ```bash
 sts2
 sts2 state
-sts2 state --layer filtered
-sts2 state --layer raw
-sts2 state --view decision --layer filtered
-sts2 actions
+sts2 state --raw
 sts2 act play_card 0
 sts2 act play_card 0 0
 sts2 act playcard --card_index 0
 sts2 act 1 --card_index 0
 sts2 act play_card --card_index 0 --target_index 0
 sts2 wait --timeout 30
-sts2 state --with-window
 sts2 debug health
+sts2 debug route-render-samples
 sts2 debug window-status
 sts2 debug windows
 sts2 debug click-window 0.5 0.4 --normalized --dry-run
@@ -49,25 +46,24 @@ sts2 screenshot --activate-fallback
 
 Running `sts2` with no subcommand starts an interactive TTY mode. In non-TTY environments, such as agent command execution, it prints help instead. Interactive mode uses short keys: digits choose map/reward/card-selection options or play combat cards, `e` ends the turn, `c` collects rewards and proceeds, `r` resolves rewards, Enter refreshes or takes the only unambiguous non-card action, `?` shows help, and `q` quits.
 
-State output has three layers:
+`sts2 state` has two output modes:
 
-- `view`: default human-readable text for Agent input.
-- `filtered`: YAML schema-filtered state rendered as text for debugging and downstream tooling.
-- `raw`: full parsed HTTP state rendered as text for parser/debug work.
+- default: route the raw `/state` HTTP JSON by game state and render a compact human-readable view.
+- `--raw`: print the raw parsed `/state` HTTP JSON response.
 
-`sts2 state` defaults to the text `view` layer. Use `--layer filtered` for schema-filtered text and `--layer raw` or `--raw` for the full parsed payload rendered as text. Use `--view decision`, `--view combat`, or `--view agent` to select richer filtered state before rendering.
+The view layer is only a compact rendering of fields already present in the raw response. It does not add external window state or inferred game facts.
 
-The default combat view includes current relics, player/enemy powers, enemy intents, playable card rarity/type, resolved card rules text, piles, deck, potions, and the glossary entries currently exposed by the mod. The default map view shows current position, indexed choices, key reachable elite/rest/shop/treasure nodes, and a compact row-by-row reachable map. The default event view shows event title, event text, and indexed option titles/descriptions. The default shop view shows open inventory cards/relics/potions, prices, affordability, sale flags, and card-removal price. The default reward view shows reward rows, card choices, alternatives, and warns when a card reward has not been opened yet. The default card-selection view shows the prompt, selection constraints, indexed candidate cards, card rarity/type/cost/rules text, and legal actions. The default game-over view shows an explicit result and prioritizes player death over ambiguous backend victory flags. REST screens use API-provided actions when available; if the mod temporarily reports no actions/options on a visible rest site, the view shows marked recovery options instead of legal HTTP actions.
+The default combat view includes player/enemy state, enemy intents, playable hand, piles when exposed, and legal actions. Map, event, rest, reward, card-selection, shop, chest, character-select, main-menu, timeline, capstone, and game-over states each route to their own renderer. Legal actions are printed as runnable `sts2 act ...` commands with the argument names and option indices visible from the current raw state.
 
-`sts2 act` defaults to a filtered text action result: status, action args, a compact post-action state, and changed fields when a before/after state is available. After the action POST succeeds, the CLI refreshes `/state` and renders that fresh state when available instead of trusting a possibly stale state embedded in the action response. It also polls past brief bogus COMBAT transition states with unknown player fields after reward/end-of-run transitions. Use `--raw-result` to inspect the full parsed action result rendered as text.
+`sts2 act` posts to `/action`, routes the returned JSON by action/domain/outcome, and renders the routed action result. Pending action responses render the embedded state when the HTTP response includes one. Use `--raw-result` to inspect the full parsed `/action` response.
 
 For reward safety, `sts2 act resolve_rewards` and `sts2 act collect_rewards_and_proceed` refuse to run while a claimable Card reward exists but card choices are not visible. Claim the Card reward first so the Agent can choose or skip the shown cards.
 
-Action names can be written canonically or as aliases without separators, such as `play_card` or `playcard`. The first action argument can also be the numbered action from the current `Legal actions` list, for example `sts2 act 1 --card_index 0` when `[1] play_card(...)` is shown. Action parameters can be passed positionally or by keyword, such as `sts2 act play_card 0 0`, `sts2 act play_card 0 --target_index 0`, or `sts2 act play_card --card_index 0 --target_index 0`. Actions displayed with `option_index=0`, such as `choose_map_node(option_index=0)`, use that default when no explicit option is passed.
+Action names can be written canonically or as aliases without separators, such as `play_card` or `playcard`. The first action argument can also be the numbered action from the current `Legal actions` list, for example `sts2 act 1 --card_index 0` when `[1] play_card(...)` is shown. Action parameters can be passed positionally or by keyword, such as `sts2 act play_card 0 0`, `sts2 act play_card 0 --target_index 0`, or `sts2 act play_card --card_index 0 --target_index 0`. Actions displayed with a concrete default such as `option_index=0` have exactly one visible valid choice and can omit that argument. Actions displayed as `option_index in 0, 1, 2` require an explicit option; `sts2 act` rejects omitted option indices before sending an HTTP action when multiple choices exist.
 
 Shop and potion actions use `option_index` at the CLI boundary, matching the mod API. Positional shorthand works, for example `sts2 act buy_card 4` and `sts2 act use_potion 0`.
 
-Filtering rules live in YAML files under `src/sts2_bridge/schemas/`, split by `state/` and `action/`. Real raw HTTP samples live under `samples/http/` and are used as regression fixtures for the filtering layer.
+Route renderers live under `src/sts2_bridge/state_view/` and `src/sts2_bridge/action_view/`. Real raw HTTP samples and JSON schemas live under `samples/http/` and are used as routing/rendering regression fixtures.
 
 ## Logs
 
@@ -80,7 +76,7 @@ Help-only calls such as `sts2 --help`, `sts2 state --help`, and non-TTY no-arg `
 
 ## Screenshot Fallback
 
-`sts2 state --with-window` and `sts2 debug window-status` report whether the game process/window exists and whether Slay the Spire 2 is currently the frontmost app.
+`sts2 debug window-status` reports whether the game process/window exists and whether Slay the Spire 2 is currently the frontmost app.
 
 `sts2 screenshot` is a macOS-only debug fallback for visual inspection. When the game is frontmost, it uses ScreenCaptureKit single-window capture. When the game is not frontmost, it will not use rectangle capture by default because that would capture whatever is covering the game. macOS must grant Screen Recording permission to the terminal app that runs the command.
 
