@@ -1,7 +1,10 @@
 .venv/
 .pytest_cache/
 .cache/
+.DS_Store
 __pycache__/
 *.py[cod]
-debug/screenshots/
+debug/
 logs/
+log_viewer/
+agent_workspace/sts2_cli_bug_report.md
