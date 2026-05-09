@@ -28,6 +28,9 @@ def visible_action_entries(actions: list[str], reward: dict[str, Any] | None = N
     CLI because they would skip unresolved choices. Hide those entries from the
     visible list so numeric action ids match runnable commands.
     """
+    if _has_visible_reward_card_choice(reward):
+        return [ActionEntry(action) for action in actions if action in {"choose_reward_card", "skip_reward_cards"}]
+
     card_reward_indices = _claimable_unopened_card_reward_indices(reward)
     claimable_reward_indices = _claimable_reward_indices(reward)
     entries: list[ActionEntry] = []
@@ -117,6 +120,13 @@ def _claimable_unopened_card_reward_indices(reward: dict[str, Any] | None) -> li
         if isinstance(index, int):
             result.append(index)
     return result
+
+
+def _has_visible_reward_card_choice(reward: dict[str, Any] | None) -> bool:
+    if not reward:
+        return False
+    card_options = reward.get("card_options")
+    return isinstance(card_options, list) and bool(card_options)
 
 
 def _claimable_reward_indices(reward: dict[str, Any] | None) -> list[int]:

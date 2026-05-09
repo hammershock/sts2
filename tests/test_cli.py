@@ -370,6 +370,27 @@ def test_cli_state_renders_reward_card_choices() -> None:
 
 
 @respx.mock
+def test_cli_state_filters_noisy_reward_card_choice_actions() -> None:
+    state = fixture("state_reward_cards")
+    state["data"]["available_actions"] = [
+        "resolve_rewards",
+        "collect_rewards_and_proceed",
+        "choose_reward_card",
+        "skip_reward_cards",
+        "select_deck_card",
+    ]
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=state))
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert "Legal actions:\n[0] sts2 act choose_reward_card <option_index in 0, 1>\n[1] sts2 act skip_reward_cards" in result.stdout
+    assert "resolve_rewards" not in result.stdout
+    assert "collect_rewards_and_proceed" not in result.stdout
+    assert "select_deck_card" not in result.stdout
+
+
+@respx.mock
 def test_cli_act_rejects_legacy_arg_option() -> None:
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_combat")))
 
@@ -1033,6 +1054,65 @@ def test_cli_act_uses_visible_reward_action_indices() -> None:
     assert result.exit_code == 0
     assert json.loads(route.calls.last.request.content) == {"action": "claim_reward", "option_index": 0}
     assert "Action: claim_reward" in result.stdout
+
+
+@respx.mock
+def test_cli_act_routes_claim_reward_to_card_choice() -> None:
+    response_state = fixture("state_reward_cards")["data"]
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "request_id": "req_claim_reward_card",
+                "data": {
+                    "action": "claim_reward",
+                    "status": "completed",
+                    "stable": True,
+                    "state": response_state,
+                },
+            },
+        )
+    )
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_reward_rows")))
+
+    result = runner.invoke(app, ["act", "1", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": "claim_reward", "option_index": 1}
+    assert "Route: action/reward/claim_reward/card_choice/completed" in result.stdout
+    assert "State:\nREWARD floor=14 gold=39 route=state/reward/card_choice" in result.stdout
+    assert "Card choices:" in result.stdout
+    assert "Legal actions:\n[0] sts2 act choose_reward_card <option_index in 0, 1>\n[1] sts2 act skip_reward_cards" in result.stdout
+
+
+@respx.mock
+def test_cli_act_routes_claim_reward_to_reward_selection() -> None:
+    response_state = fixture("state_reward_rows")["data"]
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "request_id": "req_claim_reward_row",
+                "data": {
+                    "action": "claim_reward",
+                    "status": "completed",
+                    "stable": True,
+                    "state": response_state,
+                },
+            },
+        )
+    )
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_reward_rows")))
+
+    result = runner.invoke(app, ["act", "0", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": "claim_reward", "option_index": 0}
+    assert "Route: action/reward/claim_reward/reward_selection/completed" in result.stdout
+    assert "State:\nREWARD floor=14 gold=22 route=state/reward/rows" in result.stdout
+    assert "Legal actions:\n[0] sts2 act claim_reward 0\n[1] sts2 act claim_reward 1" in result.stdout
 
 
 @respx.mock

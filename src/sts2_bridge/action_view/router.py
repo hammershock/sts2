@@ -130,13 +130,40 @@ def route_action_response(
             details={"action": action, "status": status, "stable": stable},
             retryable=False,
         )
+    category = _successful_action_category(domain, action, outcome, raw)
     return ActionRoute(
-        f"action/{domain}/{action}/{outcome}",
+        category,
         action,
         outcome,
         matched_categories=matches,
         http_status=http_status,
     )
+
+
+def _successful_action_category(domain: str, action: str, outcome: str, raw: dict[str, Any]) -> str:
+    if action == "claim_reward" and outcome == "completed":
+        subroute = _claim_reward_subroute(raw)
+        if subroute:
+            return f"action/{domain}/{action}/{subroute}/{outcome}"
+    return f"action/{domain}/{action}/{outcome}"
+
+
+def _claim_reward_subroute(raw: dict[str, Any]) -> str | None:
+    data = raw.get("data") if isinstance(raw.get("data"), dict) else {}
+    state = data.get("state") if isinstance(data.get("state"), dict) else None
+    if not isinstance(state, dict):
+        return None
+    try:
+        from sts2_bridge.state_view.router import route_state_response
+
+        state_route = route_state_response({"ok": True, "data": state}).category
+    except BridgeError:
+        return None
+    if state_route == "state/reward/card_choice":
+        return "card_choice"
+    if state_route.startswith("state/reward/"):
+        return "reward_selection"
+    return None
 
 
 def _matching_schema_categories(raw: dict[str, Any]) -> tuple[str, ...]:
