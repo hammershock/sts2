@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from sts2_bridge.state_actions import ActionEntry, visible_action_entries
 from sts2_bridge.state_view.model import ViewContext, indexed_line, one_line
 
 
@@ -30,15 +31,17 @@ def section(title: str, lines: list[str]) -> list[str]:
 
 
 def actions(ctx: ViewContext) -> list[str]:
-    if not ctx.actions:
+    reward = ctx.data.get("reward") if isinstance(ctx.data.get("reward"), dict) else None
+    entries = visible_action_entries(ctx.actions, reward)
+    if not entries:
         return ["No legal actions exposed by /state."]
-    return [action_signature(ctx, index, action) for index, action in enumerate(ctx.actions)]
+    return [action_signature(ctx, index, entry) for index, entry in enumerate(entries)]
 
 
-def action_signature(ctx: ViewContext, index: int, action: str) -> str:
-    unavailable = _unavailable_action_hint(ctx, action)
+def action_signature(ctx: ViewContext, index: int, entry: ActionEntry) -> str:
+    action = entry.action
     if action == "play_card":
-        return _with_unavailable_hint(f"[{index}] sts2 act play_card <card_index>{_target_hint(ctx)}", unavailable)
+        return f"[{index}] sts2 act play_card <card_index>{_target_hint(ctx)}"
     if action in {
         "choose_map_node",
         "choose_event_option",
@@ -51,32 +54,18 @@ def action_signature(ctx: ViewContext, index: int, action: str) -> str:
         "select_character",
         "choose_capstone_option",
     }:
-        values = _valid_option_indices(ctx, action)
+        values = _entry_option_values(entry) or _valid_option_indices(ctx, action)
         hint = _value_hint("option_index", values)
-        return _with_unavailable_hint(f"[{index}] sts2 act {action} {hint}".rstrip(), unavailable)
+        return f"[{index}] sts2 act {action} {hint}".rstrip()
     if action in {"use_potion", "discard_potion"}:
-        values = _valid_potion_indices(ctx, action)
+        values = _entry_option_values(entry) or _valid_potion_indices(ctx, action)
         hint = _value_hint("option_index", values)
-        return _with_unavailable_hint(f"[{index}] sts2 act {action} {hint} [target_index]".rstrip(), unavailable)
+        return f"[{index}] sts2 act {action} {hint} [target_index]".rstrip()
     if action.startswith("buy_"):
-        values = _valid_option_indices(ctx, action)
+        values = _entry_option_values(entry) or _valid_option_indices(ctx, action)
         hint = _value_hint("option_index", values)
-        return _with_unavailable_hint(f"[{index}] sts2 act {action} {hint}".rstrip(), unavailable)
-    return _with_unavailable_hint(f"[{index}] sts2 act {action}", unavailable)
-
-
-def _with_unavailable_hint(line: str, hint: str | None) -> str:
-    return f"{line} [unavailable, {hint}]" if hint else line
-
-
-def _unavailable_action_hint(ctx: ViewContext, action: str) -> str | None:
-    if action not in {"resolve_rewards", "collect_rewards_and_proceed"}:
-        return None
-    card_reward_indices = _claimable_unopened_card_reward_indices(ctx)
-    if not card_reward_indices:
-        return None
-    command = f"sts2 act claim_reward {_value_hint('option_index', card_reward_indices)}"
-    return f"use {command} instead"
+        return f"[{index}] sts2 act {action} {hint}".rstrip()
+    return f"[{index}] sts2 act {action}"
 
 
 def run_lines(ctx: ViewContext) -> list[str]:
@@ -136,6 +125,11 @@ def _value_hint(name: str, values: list[int]) -> str:
     return f"<{name}>"
 
 
+def _entry_option_values(entry: ActionEntry) -> list[int]:
+    value = entry.args.get("option_index")
+    return [value] if isinstance(value, int) else []
+
+
 def _valid_option_indices(ctx: ViewContext, action: str) -> list[int]:
     if action == "choose_map_node":
         return _indices(((ctx.agent.get("map") or {}).get("options"))) or _indices(((ctx.data.get("map") or {}).get("available_nodes")))
@@ -169,30 +163,6 @@ def _valid_potion_indices(ctx: ViewContext, action: str) -> list[int]:
     potions = run.get("potions") or []
     flag = "usable" if action == "use_potion" else "discard"
     return [int(item["i"]) for item in potions if isinstance(item, dict) and item.get(flag) and isinstance(item.get("i"), int)]
-
-
-def _claimable_unopened_card_reward_indices(ctx: ViewContext) -> list[int]:
-    reward = ctx.data.get("reward")
-    if not isinstance(reward, dict):
-        return []
-    card_options = reward.get("card_options")
-    if isinstance(card_options, list) and card_options:
-        return []
-    rows = reward.get("rewards")
-    if not isinstance(rows, list):
-        return []
-    result: list[int] = []
-    for fallback_index, row in enumerate(rows):
-        if not isinstance(row, dict):
-            continue
-        if str(row.get("reward_type")).lower() != "card":
-            continue
-        if row.get("claimable") is False:
-            continue
-        index = row.get("index", fallback_index)
-        if isinstance(index, int):
-            result.append(index)
-    return result
 
 
 def _indices(items: Any, *, actionable_only: bool = False) -> list[int]:

@@ -24,7 +24,7 @@ from sts2_bridge.models import BridgeError, GameState
 from sts2_bridge.rendering import render_state_view
 from sts2_bridge.state_view import render_state_response, route_state_response
 from sts2_bridge.state_view.model import response_data
-from sts2_bridge.state_actions import effective_available_actions, has_recovery_options
+from sts2_bridge.state_actions import effective_available_actions, effective_visible_action_entries, has_recovery_options
 from sts2_bridge.trace import log_cli_call, should_log_cli_call, _now_iso
 
 app = typer.Typer(
@@ -134,10 +134,9 @@ def act(
                 "Cannot resolve action name or index because current state is unavailable.",
                 retryable=True,
             )
-        resolved_action = resolve_action(action, effective_available_actions(before))
         raw_tokens = list(ctx.args)
-        args = parse_action_args(resolved_action, raw_tokens)
-        args = _complete_action_args_from_state(resolved_action, args, raw_tokens, before)
+        resolved_action, args, completion_tokens = _parse_action_request(action, raw_tokens, before)
+        args = _complete_action_args_from_state(resolved_action, args, completion_tokens, before)
         _validate_action_against_state(resolved_action, before)
         try:
             response = client.action_response(resolved_action, args)
@@ -795,6 +794,44 @@ def _action_if_available(state: GameState, action: str, args: dict[str, Any]) ->
             retryable=False,
         )
     return action, args
+
+
+def _parse_action_request(
+    action_ref: str,
+    raw_tokens: list[str],
+    state: GameState,
+) -> tuple[str, dict[str, Any], list[str]]:
+    if not action_ref.isdigit():
+        action = resolve_action(action_ref, effective_available_actions(state))
+        return action, parse_action_args(action, raw_tokens), raw_tokens
+
+    entries = effective_visible_action_entries(state)
+    index = int(action_ref)
+    if index < 0 or index >= len(entries):
+        raise BridgeError(
+            "invalid_action",
+            "Action index is outside the current visible action list.",
+            details={
+                "action": action_ref,
+                "available_actions": [
+                    {"index": item_index, "action": entry.action, "args": entry.args}
+                    for item_index, entry in enumerate(entries)
+                ],
+            },
+            retryable=False,
+        )
+    entry = entries[index]
+    if raw_tokens:
+        return entry.action, {**entry.args, **parse_action_args(entry.action, raw_tokens)}, raw_tokens
+    if entry.args:
+        return entry.action, dict(entry.args), _tokens_for_prefilled_args(entry.args)
+    return entry.action, parse_action_args(entry.action, []), []
+
+
+def _tokens_for_prefilled_args(args: dict[str, Any]) -> list[str]:
+    if "option_index" in args:
+        return [str(args["option_index"])]
+    return []
 
 
 def _validate_action_against_state(action: str, state: GameState) -> None:
