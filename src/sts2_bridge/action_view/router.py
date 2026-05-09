@@ -45,6 +45,7 @@ ACTION_DOMAINS = {
     "choose_capstone_option": "game_menu",
     "continue_run": "game_menu",
     "return_to_main_menu": "game_menu",
+    "open_character_select": "character_select",
     "select_character": "character_select",
     "embark": "character_select",
     "proceed": "navigation",

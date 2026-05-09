@@ -877,6 +877,73 @@ def test_cli_act_routes_return_to_main_menu_by_visible_index() -> None:
 
 
 @respx.mock
+def test_cli_act_routes_open_character_select() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "request_id": "req_open_character_select",
+                "data": {"action": "open_character_select", "status": "completed", "stable": True},
+            },
+        )
+    )
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "data": {
+                    "screen": "MAIN_MENU",
+                    "available_actions": ["open_character_select", "open_timeline"],
+                    "session": {"mode": "singleplayer", "phase": "menu", "control_scope": "local_player"},
+                },
+            },
+        )
+    )
+
+    result = runner.invoke(app, ["act", "open_character_select", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": "open_character_select"}
+    assert "Route: action/character_select/open_character_select/completed" in result.stdout
+    assert "Action: open_character_select" in result.stdout
+
+
+@respx.mock
+def test_cli_act_routes_open_character_select_by_visible_index() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "request_id": "req_open_character_select",
+                "data": {"action": "open_character_select", "status": "completed", "stable": True},
+            },
+        )
+    )
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "data": {
+                    "screen": "MAIN_MENU",
+                    "available_actions": ["open_character_select", "open_timeline"],
+                    "session": {"mode": "singleplayer", "phase": "menu", "control_scope": "local_player"},
+                },
+            },
+        )
+    )
+
+    result = runner.invoke(app, ["act", "0", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": "open_character_select"}
+    assert "Route: action/character_select/open_character_select/completed" in result.stdout
+
+
+@respx.mock
 def test_cli_act_blocks_resolve_rewards_when_card_reward_is_unloaded() -> None:
     route = respx.post(f"{BASE_URL}/action").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
