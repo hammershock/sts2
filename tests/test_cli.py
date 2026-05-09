@@ -25,6 +25,21 @@ def sample(pattern: str) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def write_http_log(logs_dir: Path, *records: dict) -> None:
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    path = logs_dir / "test.jsonl"
+    path.write_text("\n".join(json.dumps(record) for record in records) + "\n", encoding="utf-8")
+
+
+def http_record(method: str, url: str, payload: dict | None, response: dict | None, status_code: int | None = 200) -> dict:
+    record: dict = {
+        "request": {"method": method, "url": url, "body": payload},
+    }
+    if response is not None:
+        record["response"] = {"status_code": status_code, "text": json.dumps(response)}
+    return record
+
+
 @respx.mock
 def test_cli_health_outputs_text(isolated_logs) -> None:
     respx.get(f"{BASE_URL}/health").mock(
@@ -41,6 +56,77 @@ def test_cli_health_outputs_text(isolated_logs) -> None:
     assert records[-1]["output"] == "Health: ready\n"
 
 
+def test_debug_route_render_samples_rebuilds_file_tree(tmp_path) -> None:
+    logs_dir = tmp_path / "http"
+    output_dir = tmp_path / "route_render_samples"
+    stale = output_dir / "stale.txt"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("old\n", encoding="utf-8")
+    write_http_log(
+        logs_dir,
+        http_record(
+            "GET",
+            "http://127.0.0.1:8080/state",
+            None,
+            {
+                "ok": True,
+                "request_id": "req_state",
+                "data": {
+                    "screen": "MAP",
+                    "available_actions": ["choose_map_node"],
+                    "run": {"floor": 2, "gold": 99},
+                    "map": {"available_nodes": [{"index": 0, "row": 1, "col": 0}]},
+                },
+            },
+        ),
+        http_record(
+            "POST",
+            "http://127.0.0.1:8080/action",
+            {"action": "play_card", "card_index": 0},
+            {
+                "ok": True,
+                "request_id": "req_action",
+                "data": {"action": "play_card", "status": "completed", "stable": True, "message": "Action completed."},
+            },
+        ),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "debug",
+            "route-render-samples",
+            "--logs-dir",
+            str(logs_dir),
+            "--output-dir",
+            str(output_dir),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Route render samples regenerated." in result.stdout
+    assert "Routes: 2" in result.stdout
+    assert "Samples: 2" in result.stdout
+    assert not stale.exists()
+    state_file = next((output_dir / "state/map/route_selection").glob("*.txt"))
+    action_file = next((output_dir / "action/gameplay/combat/play_card/completed").glob("*.txt"))
+    assert state_file.read_text(encoding="utf-8").startswith("MAP floor=2 gold=99")
+    assert action_file.read_text(encoding="utf-8").startswith("Action: play_card")
+    index = (output_dir / "index.txt").read_text(encoding="utf-8")
+    assert "state/map/route_selection" in index
+    assert "action/gameplay/combat/play_card/completed" in index
+
+
+def test_debug_help_omits_old_route_probe_commands() -> None:
+    result = runner.invoke(app, ["debug", "--help"])
+
+    assert result.exit_code == 0
+    assert "route-render-samples" in result.stdout
+    assert "route-sample " not in result.stdout
+    assert "route-samples " not in result.stdout
+    assert "route-tree " not in result.stdout
+
+
 @respx.mock
 def test_cli_state_defaults_to_text_view() -> None:
     respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_combat")))
@@ -48,19 +134,13 @@ def test_cli_state_defaults_to_text_view() -> None:
     result = runner.invoke(app, ["state", "--base-url", BASE_URL])
 
     assert result.exit_code == 0
-    assert result.stdout.startswith("COMBAT turn=2")
-    assert "Player: HP 63/75, Block 4, Energy 3, Stars 1" in result.stdout
-    assert "Player powers: Strength 2" in result.stdout
-    assert "Incoming attack damage: 6" in result.stdout
-    assert "[0] Ring of the Snake: At the start of each combat, draw 2 additional cards." in result.stdout
-    assert "[0] Cultist: HP 24/48, Block 0, Intents attack 6, Powers none" in result.stdout
-    assert "[0] Strike | Basic Attack | cost 1 | playable | target enemy[0] | Deal 8 damage." in result.stdout
-    assert "Piles:" in result.stdout
-    assert "Draw: 5 card(s)" in result.stdout
-    assert "Deck: Strike, Defend" in result.stdout
+    assert result.stdout.startswith("COMBAT turn=2 floor=3 gold=99 route=state/gameplay/combat/actionable")
+    assert "Player: HP 63/75 | Block 4 | Energy 3 | Stars 1" in result.stdout
+    assert "[0] Cultist | HP 24/48 | Block 0 | Intent attack | alive" in result.stdout
+    assert "[0] Strike [1]: Deal 8 damage. | playable | targets 0" in result.stdout
     assert "- Block: Block prevents attack damage." in result.stdout
-    assert "[0] play_card(card_index, target_index=0)" in result.stdout
-    assert "[1] end_turn" in result.stdout
+    assert "[0] sts2 act play_card <card_index> 0" in result.stdout
+    assert "[1] sts2 act end_turn" in result.stdout
 
 
 @respx.mock
@@ -69,16 +149,8 @@ def test_cli_state_filtered_layer_outputs_text() -> None:
 
     result = runner.invoke(app, ["state", "--layer", "filtered", "--base-url", BASE_URL])
 
-    assert result.exit_code == 0
-    assert not result.stdout.lstrip().startswith("{")
-    payload = yaml.safe_load(result.stdout)
-    assert payload["screen"] == "COMBAT"
-    assert payload["combat"]["playable"][0]["card_name"] == "Strike"
-    assert payload["combat"]["playable"][0]["rarity"] == "Basic"
-    assert payload["combat"]["playable"][0]["card_type"] == "Attack"
-    assert payload["combat"]["playable"][0]["resolved_rules_text"] == "Deal 8 damage."
-    assert payload["relics"][0]["name"] == "Ring of the Snake"
-    assert payload["glossary"]["Block"] == "Block prevents attack damage."
+    assert result.exit_code == 2
+    assert "No such option: --layer" in result.output
 
 
 @respx.mock
@@ -90,10 +162,9 @@ def test_cli_state_renders_compact_map_view() -> None:
     assert result.exit_code == 0
     assert result.stdout.startswith("MAP floor=1 gold=99")
     assert "Current: r0c3" in result.stdout
-    assert "[0] M r1c0" in result.stdout
+    assert "[0] Monster (1,0)" in result.stdout
     assert "Reachable map:" in result.stdout
-    assert "r8: c1E, c3E, c4M, c5M, c6E" in result.stdout
-    assert "Legal actions:\n[0] choose_map_node(option_index=0)" in result.stdout
+    assert "Legal actions:\n[0] sts2 act choose_map_node <option_index in 0, 1, 2>" in result.stdout
     assert "deck" not in result.stdout
 
 
@@ -109,10 +180,74 @@ def test_cli_state_renders_event_title_and_options() -> None:
     assert result.exit_code == 0
     assert result.stdout.startswith("EVENT floor=1 gold=99")
     assert "Event: 涅奥 (NEOW)" in result.stdout
-    assert "[0] 轰鸣海螺 | 在精英战的战斗开始时，额外抽2张牌。 | relic preview" in result.stdout
-    assert "[1] 金色珍珠 | 拾起时，获得150金币。 | relic preview" in result.stdout
-    assert "[2] 沉重石板 | 从3张稀有牌中选择1张加入你的牌组。将1张受伤加入你的牌组。 | relic preview" in result.stdout
-    assert "Legal actions:\n[0] choose_event_option(option_index=0)" in result.stdout
+    assert "[0] 轰鸣海螺 | 在精英战的战斗开始时，额外抽2张牌。" in result.stdout
+    assert "[1] 金色珍珠 | 拾起时，获得150金币。" in result.stdout
+    assert "[2] 沉重石板 | 从3张稀有牌中选择1张加入你的牌组。将1张受伤加入你的牌组。" in result.stdout
+    assert "Legal actions:\n[0] sts2 act choose_event_option <option_index in 0, 1, 2>" in result.stdout
+
+
+@respx.mock
+def test_cli_state_renders_main_menu_timeline_slots() -> None:
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_main_menu_timeline")))
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("MAIN_MENU")
+    assert "Timeline: can_choose" in result.stdout
+    assert "Timeline slots:" in result.stdout
+    assert "[0] 先子星 | complete | COLORLESS1_EPOCH" in result.stdout
+    assert "[6] 涅奥 | complete | NEOW_EPOCH" in result.stdout
+    assert "[1] sts2 act choose_timeline_epoch" in result.stdout
+
+
+@respx.mock
+def test_cli_state_renders_timeline_overlay_limit() -> None:
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(200, json=fixture("state_main_menu_timeline_overlay"))
+    )
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert "Timeline: inspect_open, can_confirm, can_choose" in result.stdout
+    assert "[2] sts2 act confirm_timeline_overlay" in result.stdout
+
+
+@respx.mock
+def test_cli_state_renders_character_select_route() -> None:
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "request_id": "character-select-test",
+                "data": {
+                    "screen": "CHARACTER_SELECT",
+                    "available_actions": ["close_main_menu_submenu", "select_character", "embark"],
+                    "character_select": {
+                        "selected_character_id": "REGENT",
+                        "can_embark": True,
+                        "ascension": 0,
+                        "player_count": 1,
+                        "max_players": 1,
+                        "characters": [
+                            {"index": 0, "character_id": "IRONCLAD", "name": "铁甲战士", "is_locked": False, "is_selected": False},
+                            {"index": 3, "character_id": "REGENT", "name": "储君", "is_locked": False, "is_selected": True},
+                        ],
+                    },
+                },
+            },
+        )
+    )
+
+    result = runner.invoke(app, ["state", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("CHARACTER_SELECT route=state/character_select/select")
+    assert "Selected: REGENT | Embark: true | Ascension: 0 | Players: 1/1" in result.stdout
+    assert "[3] 储君 | selected" in result.stdout
+    assert "[1] sts2 act select_character <option_index in 0, 3>" in result.stdout
 
 
 @respx.mock
@@ -124,13 +259,9 @@ def test_cli_state_renders_open_shop_inventory() -> None:
     assert result.exit_code == 0
     assert result.stdout.startswith("SHOP floor=22 gold=194")
     assert "Shop: open" in result.stdout
-    assert "Card removal: 75g affordable" in result.stdout
-    assert "[0] 翻越撑击 | Common Attack | cost 1 | 52g affordable | 奇巧。 对所有敌人造成6点伤害。 | character" in result.stdout
-    assert "[1] 开心小花 | Rare Power | cost 0 | 158g affordable" in result.stdout
-    assert "0g sale unaffordable" not in result.stdout
-    assert "[0] 怀表 | Rare | 304g unaffordable" in result.stdout
-    assert "[0] 火焰药水 | Common | CombatOnly | 48g affordable" in result.stdout
-    assert "Legal actions:\n[0] close_shop_inventory\n[1] buy_card(option_index=0)" in result.stdout
+    assert "price=75 available=True used=False" in result.stdout
+    assert "[0] sts2 act close_shop_inventory" in result.stdout
+    assert "[1] sts2 act buy_card <option_index>" in result.stdout
 
 
 @respx.mock
@@ -143,10 +274,8 @@ def test_cli_state_renders_game_over_death_even_with_victory_flag() -> None:
 
     assert result.exit_code == 0
     assert result.stdout.startswith("GAME_OVER floor=48 gold=49")
-    assert "Result: death" in result.stdout
-    assert "Final: floor 48, character SILENT, HP 0/80, alive false" in result.stdout
-    assert "API victory flag ignored" in result.stdout
-    assert "[0] return_to_main_menu" in result.stdout
+    assert "Result: death | floor 48 | character SILENT | HP 0/80 | alive false" in result.stdout
+    assert "[0] sts2 act return_to_main_menu" in result.stdout
 
 
 @respx.mock
@@ -158,10 +287,9 @@ def test_cli_state_renders_card_selection_options() -> None:
     assert result.exit_code == 0
     assert result.stdout.startswith("CARD_SELECTION turn=3 floor=5 gold=88")
     assert "Prompt: 选择1张牌保留。" in result.stdout
-    assert "Selection: combat_hand_select | select 1-1 | selected 0 | requires confirm" in result.stdout
-    assert "[0] Strike | Basic Attack | cost 1 | Deal 6 damage." in result.stdout
-    assert "[1] Defend | Basic Skill | cost 1 | Gain 5 Block. | keywords Block" in result.stdout
-    assert "Legal actions:\n[0] select_deck_card(option_index=0)\n[1] confirm_selection" in result.stdout
+    assert "[0] Strike [1]: Deal 6 damage." in result.stdout
+    assert "[1] Defend [1]: Gain 5 Block." in result.stdout
+    assert "Legal actions:\n[0] sts2 act select_deck_card <option_index in 0, 1>\n[1] sts2 act confirm_selection" in result.stdout
 
 
 @respx.mock
@@ -172,11 +300,8 @@ def test_cli_state_renders_rest_fallback_options() -> None:
 
     assert result.exit_code == 0
     assert result.stdout.startswith("REST floor=11 gold=147")
-    assert "Recovery options:" in result.stdout
-    assert "[0] Rest | Heal at the rest site. | recovery: API did not expose executable rest actions" in result.stdout
-    assert "[1] Smith | Upgrade one card. | recovery: API did not expose executable rest actions" in result.stdout
-    assert "Recovery command: sts2 debug recover-rest" in result.stdout
-    assert "Legal actions:" not in result.stdout
+    assert "Recovery options:" not in result.stdout
+    assert "No legal actions exposed by /state." in result.stdout
 
 
 @respx.mock
@@ -185,9 +310,8 @@ def test_cli_wait_returns_rest_recovery_state_when_api_omits_actions() -> None:
 
     result = runner.invoke(app, ["wait", "--base-url", BASE_URL, "--timeout", "0.01"])
 
-    assert result.exit_code == 0
-    assert "Recovery options:" in result.stdout
-    assert "Legal actions:" not in result.stdout
+    assert result.exit_code == 1
+    assert "wait_timeout" in result.stdout
 
 
 @respx.mock
@@ -198,7 +322,7 @@ def test_cli_state_does_not_render_rest_fallback_options_after_choice() -> None:
 
     assert result.exit_code == 0
     assert "Options:" not in result.stdout
-    assert result.stdout.rstrip().endswith("Legal actions:\n[0] proceed")
+    assert result.stdout.rstrip().endswith("Legal actions:\n[0] sts2 act proceed")
 
 
 @respx.mock
@@ -208,8 +332,8 @@ def test_cli_state_renders_rest_recovery_when_only_potion_action_exists() -> Non
     result = runner.invoke(app, ["state", "--base-url", BASE_URL])
 
     assert result.exit_code == 0
-    assert "Recovery options:" in result.stdout
-    assert "Legal actions:\n[0] discard_potion(option_index=0)" in result.stdout
+    assert "Recovery options:" not in result.stdout
+    assert "Legal actions:\n[0] sts2 act discard_potion <option_index> [target_index]" in result.stdout
 
 
 @respx.mock
@@ -221,12 +345,10 @@ def test_cli_state_renders_reward_rows_and_unloaded_card_note() -> None:
     assert result.exit_code == 0
     assert result.stdout.startswith("REWARD floor=14 gold=22")
     assert "Reward: pending_card_choice=false, can_proceed=true" in result.stdout
-    assert "[0] Gold: 17金币 | claimable" in result.stdout
-    assert "[1] Card: 将一张牌添加到你的牌组。 | claimable" in result.stdout
-    assert "Card choices: not loaded" in result.stdout
-    assert "claim the Card reward first" in result.stdout
-    assert "[0] resolve_rewards(may skip unresolved card reward)" in result.stdout
-    assert "[2] claim_reward(option_index=0)" in result.stdout
+    assert "[0] Gold: 17金币" in result.stdout
+    assert "[1] Card: 将一张牌添加到你的牌组。" in result.stdout
+    assert "[0] sts2 act resolve_rewards" in result.stdout
+    assert "[2] sts2 act claim_reward <option_index in 0, 1>" in result.stdout
 
 
 @respx.mock
@@ -238,11 +360,11 @@ def test_cli_state_renders_reward_card_choices() -> None:
     assert result.exit_code == 0
     assert "Reward: pending_card_choice=true, can_proceed=false" in result.stdout
     assert "Card choices:" in result.stdout
-    assert "[0] 精准 | Uncommon Power | cost 1 | 小刀额外造成4点伤害。" in result.stdout
-    assert "[1] 投掷匕首 | Common Attack | cost 1 | 造成9点伤害。 抽1张牌。 丢弃一张牌。" in result.stdout
+    assert "[0] 精准：小刀额外造成4点伤害。" in result.stdout
+    assert "[1] 投掷匕首：造成9点伤害。 抽1张牌。 丢弃一张牌。" in result.stdout
     assert "Alternatives:\n[0] 跳过" in result.stdout
-    assert "[0] choose_reward_card(option_index=0)" in result.stdout
-    assert "[1] skip_reward_cards" in result.stdout
+    assert "[0] sts2 act choose_reward_card <option_index in 0, 1>" in result.stdout
+    assert "[1] sts2 act skip_reward_cards" in result.stdout
 
 
 @respx.mock
@@ -300,8 +422,8 @@ def test_cli_act_parses_action_alias_and_keyword_args() -> None:
     assert json.loads(route.calls.last.request.content) == {"action": "play_card", "card_index": 0, "target_index": 1}
     assert "Action: play_card" in result.stdout
     assert "Args: card_index=0, target_index=1" in result.stdout
-    assert "Changes:" in result.stdout
-    assert "[0] end_turn" in result.stdout
+    assert "Route: action/gameplay/combat/play_card/completed" in result.stdout
+    assert "Changes:" not in result.stdout
 
 
 @respx.mock
@@ -328,6 +450,96 @@ def test_cli_act_parses_positional_action_args() -> None:
 
     assert result.exit_code == 0
     assert json.loads(route.calls.last.request.content) == {"action": "play_card", "card_index": 0, "target_index": 1}
+
+
+@respx.mock
+def test_cli_act_routes_action_error_response() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(
+            409,
+            json={
+                "ok": False,
+                "request_id": "req_error",
+                "error": {
+                    "code": "invalid_target",
+                    "message": "This card requires target_index.",
+                    "details": {"action": "play_card", "card_id": "Strike"},
+                    "retryable": False,
+                },
+            },
+        )
+    )
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "data": {
+                    "screen": "COMBAT",
+                    "in_combat": True,
+                    "available_actions": ["play_card"],
+                    "combat": {"hand": [{"index": 0, "name": "Strike", "playable": True}], "enemies": []},
+                },
+            },
+        )
+    )
+
+    result = runner.invoke(app, ["act", "play_card", "0", "--base-url", BASE_URL])
+
+    assert result.exit_code == 1
+    assert route.called
+    assert "Route: action/gameplay/combat/play_card/error/invalid_target" in result.stdout
+    assert "Message: This card requires target_index." in result.stdout
+
+
+@respx.mock
+def test_cli_act_routes_pending_action_response() -> None:
+    pending_state = {
+        "screen": "CARD_SELECTION",
+        "available_actions": ["select_deck_card"],
+        "selection": {
+            "kind": "combat_hand_select",
+            "prompt": "选择1张牌。",
+            "cards": [{"index": 0, "name": "Strike", "energy_cost": 1, "resolved_rules_text": "Deal 6 damage."}],
+        },
+    }
+    respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "request_id": "req_pending",
+                "data": {
+                    "action": "play_card",
+                    "status": "pending",
+                    "stable": False,
+                    "message": "Action is waiting for a follow-up selection.",
+                    "state": pending_state,
+                },
+            },
+        )
+    )
+    respx.get(f"{BASE_URL}/state").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "data": {
+                    "screen": "COMBAT",
+                    "in_combat": True,
+                    "available_actions": ["play_card"],
+                    "combat": {"hand": [{"index": 0, "name": "Setup", "playable": True}], "enemies": []},
+                },
+            },
+        )
+    )
+
+    result = runner.invoke(app, ["act", "play_card", "0", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert "Route: action/gameplay/combat/play_card/pending" in result.stdout
+    assert "Next: continue from embedded state below." in result.stdout
+    assert "State:\nCARD_SELECTION" in result.stdout
 
 
 @respx.mock
@@ -383,6 +595,39 @@ def test_cli_act_uses_default_option_index_for_numbered_option_action() -> None:
 
 
 @respx.mock
+def test_cli_act_rejects_implicit_option_index_when_multiple_choices_exist() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
+    )
+    respx.get(f"{BASE_URL}/state").mock(return_value=httpx.Response(200, json=fixture("state_event_neow_three_options")))
+
+    result = runner.invoke(app, ["act", "0", "--base-url", BASE_URL])
+
+    assert result.exit_code == 1
+    assert "ERROR ambiguous_action_args:" in result.stdout
+    assert "valid_option_index:" in result.stdout
+    assert not route.calls
+
+
+@respx.mock
+def test_cli_act_accepts_explicit_option_index_when_multiple_choices_exist() -> None:
+    route = respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
+    )
+    respx.get(f"{BASE_URL}/state").mock(
+        side_effect=[
+            httpx.Response(200, json=fixture("state_event_neow_three_options")),
+            httpx.Response(200, json=fixture("state_event_neow_three_options")),
+        ]
+    )
+
+    result = runner.invoke(app, ["act", "choose_event_option", "1", "--base-url", BASE_URL])
+
+    assert result.exit_code == 0
+    assert json.loads(route.calls.last.request.content) == {"action": "choose_event_option", "option_index": 1}
+
+
+@respx.mock
 def test_cli_act_rejects_rest_fallback_action_when_api_omits_actions() -> None:
     route = respx.post(f"{BASE_URL}/action").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
@@ -397,7 +642,7 @@ def test_cli_act_rejects_rest_fallback_action_when_api_omits_actions() -> None:
 
 
 @respx.mock
-def test_cli_act_reports_rest_recovery_after_rest_desync() -> None:
+def test_cli_act_renders_action_route_without_refetching_state() -> None:
     route = respx.post(f"{BASE_URL}/action").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
     )
@@ -421,12 +666,12 @@ def test_cli_act_reports_rest_recovery_after_rest_desync() -> None:
 
     assert result.exit_code == 0
     assert json.loads(route.calls.last.request.content) == {"action": "choose_rest_option", "option_index": 0}
-    assert "REST recovery:" in result.stdout
-    assert "Next: sts2 debug recover-rest" in result.stdout
+    assert "Route: action/rest/choose_rest_option/completed" in result.stdout
+    assert "REST recovery:" not in result.stdout
 
 
 @respx.mock
-def test_cli_act_refreshes_state_instead_of_using_stale_action_state() -> None:
+def test_cli_act_uses_embedded_action_state() -> None:
     before_state = {
         "ok": True,
         "data": {
@@ -481,12 +726,13 @@ def test_cli_act_refreshes_state_instead_of_using_stale_action_state() -> None:
     result = runner.invoke(app, ["act", "play_card", "0", "--base-url", BASE_URL])
 
     assert result.exit_code == 0
-    assert "[1] Blade Dance" in result.stdout
-    assert "[2] Blade Dance" not in result.stdout
+    assert "State:\nCOMBAT" in result.stdout
+    assert "[1] Strike" in result.stdout
+    assert "[2] Blade Dance" in result.stdout
 
 
 @respx.mock
-def test_cli_act_polls_past_bogus_transition_combat_state() -> None:
+def test_cli_act_does_not_poll_for_post_action_state() -> None:
     route = respx.post(f"{BASE_URL}/action").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
     )
@@ -534,13 +780,13 @@ def test_cli_act_polls_past_bogus_transition_combat_state() -> None:
 
     assert result.exit_code == 0
     assert route.called
-    assert "State:\nEVENT floor=48 gold=49" in result.stdout
-    assert "Event: 建筑师 (THE_ARCHITECT)" in result.stdout
+    assert "Route: action/reward/collect_rewards_and_proceed/completed" in result.stdout
+    assert "State:" not in result.stdout
     assert "Player: HP ?/?" not in result.stdout
 
 
 @respx.mock
-def test_cli_act_enemy_death_delta_includes_terminal_values() -> None:
+def test_cli_act_no_longer_synthesizes_state_deltas() -> None:
     route = respx.post(f"{BASE_URL}/action").mock(
         return_value=httpx.Response(200, json={"ok": True, "data": {"status": "completed"}})
     )
@@ -576,14 +822,9 @@ def test_cli_act_enemy_death_delta_includes_terminal_values() -> None:
 
     assert result.exit_code == 0
     assert route.called
-    assert "current_hp:" in result.stdout
-    assert "from: 11" in result.stdout
-    assert "to: 0" in result.stdout
-    assert "delta: -11" in result.stdout
-    assert "is_alive:" in result.stdout
-    assert "from: true" in result.stdout
-    assert "to: false" in result.stdout
-    assert "defeated: true" in result.stdout
+    assert "Route: action/gameplay/combat/play_card/completed" in result.stdout
+    assert "current_hp:" not in result.stdout
+    assert "delta:" not in result.stdout
 
 
 @respx.mock
@@ -633,8 +874,8 @@ def test_cli_actions_renders_option_index_default_as_text() -> None:
 
     result = runner.invoke(app, ["actions", "--base-url", BASE_URL])
 
-    assert result.exit_code == 0
-    assert result.stdout == "Legal actions:\n[0] choose_map_node(option_index=0)\n"
+    assert result.exit_code == 2
+    assert "No such command" in result.output
 
 
 @respx.mock
@@ -655,10 +896,8 @@ def test_cli_actions_renders_shop_and_potion_option_index() -> None:
 
     result = runner.invoke(app, ["actions", "--base-url", BASE_URL])
 
-    assert result.exit_code == 0
-    assert "[0] buy_card(option_index=0)" in result.stdout
-    assert "[1] buy_potion(option_index=0)" in result.stdout
-    assert "[2] use_potion(option_index=0, optional target_index)" in result.stdout
+    assert result.exit_code == 2
+    assert "No such command" in result.output
 
 
 @respx.mock

@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "data": {
+    "state_version": 9,
+    "run_id": "event-test",
+    "screen": "EVENT",
+    "available_actions": ["choose_event_option"],
+    "run": {
+      "floor": 1,
+      "gold": 99
+    },
+    "event": {
+      "event_id": "NEOW",
+      "title": "涅奥",
+      "description": "",
+      "is_finished": false,
+      "options": [
+        {
+          "index": 0,
+          "title": "营养牡蛎",
+          "description": "获得11点最大生命值。",
+          "is_locked": false,
+          "has_relic_preview": true
+        },
+        {
+          "index": 1,
+          "title": "轰鸣海螺",
+          "description": "在精英战的战斗开始时，额外抽2张牌。",
+          "is_locked": false,
+          "has_relic_preview": true
+        },
+        {
+          "index": 2,
+          "title": "涅奥的骨头",
+          "description": "获得2件随机涅奥遗物。",
+          "is_locked": false,
+          "has_relic_preview": true
+        }
+      ]
+    }
+  }
+}

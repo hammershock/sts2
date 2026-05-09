@@ -78,6 +78,7 @@ def _action_args(action: str) -> list[dict[str, Any]]:
         "choose_event_option",
         "choose_rest_option",
         "choose_reward_card",
+        "choose_timeline_epoch",
         "select_character",
         "select_deck_card",
     }:

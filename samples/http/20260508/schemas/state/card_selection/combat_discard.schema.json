@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "卡牌选择 / 战斗弃牌",
+  "properties": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "available_actions": {
+          "contains": {
+            "const": "select_deck_card"
+          },
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "screen": {
+          "const": "CARD_SELECTION"
+        },
+        "selection": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "screen",
+        "available_actions",
+        "selection"
+      ],
+      "type": "object"
+    },
+    "ok": {
+      "const": true
+    },
+    "request_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "request_id",
+    "data"
+  ],
+  "title": "state/card_selection/combat_discard",
+  "type": "object"
+}

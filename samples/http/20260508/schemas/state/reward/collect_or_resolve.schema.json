@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "奖励选择 / 收集或结算",
+  "properties": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "available_actions": {
+          "contains": {
+            "const": "collect_rewards_and_proceed"
+          },
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "reward": {
+          "type": "object"
+        },
+        "screen": {
+          "const": "REWARD"
+        }
+      },
+      "required": [
+        "screen",
+        "available_actions",
+        "reward"
+      ],
+      "type": "object"
+    },
+    "ok": {
+      "const": true
+    },
+    "request_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "request_id",
+    "data"
+  ],
+  "title": "state/reward/collect_or_resolve",
+  "type": "object"
+}

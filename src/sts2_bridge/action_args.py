@@ -15,6 +15,7 @@ POSITIONAL_ARGUMENTS: dict[str, tuple[str, ...]] = {
     "choose_event_option": ("option_index",),
     "choose_rest_option": ("option_index",),
     "choose_reward_card": ("option_index",),
+    "choose_timeline_epoch": ("option_index",),
     "select_character": ("option_index",),
     "select_deck_card": ("option_index",),
 }
@@ -25,6 +26,7 @@ DEFAULT_ARGUMENTS: dict[str, dict[str, Any]] = {
     "choose_event_option": {"option_index": 0},
     "choose_rest_option": {"option_index": 0},
     "choose_reward_card": {"option_index": 0},
+    "choose_timeline_epoch": {"option_index": 0},
     "select_character": {"option_index": 0},
     "select_deck_card": {"option_index": 0},
 }

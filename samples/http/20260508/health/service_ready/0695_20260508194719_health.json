@@ -1,0 +1,11 @@
+{
+  "data": {
+    "game_version": "v0.103.2",
+    "mod_version": "0.7.0",
+    "protocol_version": "2026-03-11-v1",
+    "service": "sts2-ai-agent",
+    "status": "ready"
+  },
+  "ok": true,
+  "request_id": "req_20260508_194719_4583_720"
+}

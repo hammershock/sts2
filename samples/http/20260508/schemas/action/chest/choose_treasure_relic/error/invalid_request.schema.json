@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "error": {
+      "additionalProperties": true,
+      "properties": {
+        "code": {
+          "const": "invalid_request"
+        },
+        "details": {
+          "additionalProperties": true,
+          "properties": {
+            "action": {
+              "const": "choose_treasure_relic"
+            }
+          },
+          "type": "object"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "details",
+        "retryable"
+      ],
+      "type": "object"
+    },
+    "ok": {
+      "const": false
+    },
+    "request_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "request_id",
+    "error"
+  ],
+  "title": "action/chest/choose_treasure_relic/error/invalid_request",
+  "type": "object"
+}

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "商店选择 / 店外入口",
+  "properties": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "available_actions": {
+          "contains": {
+            "const": "open_shop_inventory"
+          },
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "screen": {
+          "const": "SHOP"
+        },
+        "shop": {
+          "properties": {
+            "is_open": {
+              "const": false
+            }
+          },
+          "required": [
+            "is_open"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "screen",
+        "available_actions",
+        "shop"
+      ],
+      "type": "object"
+    },
+    "ok": {
+      "const": true
+    },
+    "request_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "request_id",
+    "data"
+  ],
+  "title": "state/shop/closed",
+  "type": "object"
+}

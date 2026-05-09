@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "game_version": {
+          "type": "string"
+        },
+        "mod_version": {
+          "type": "string"
+        },
+        "protocol_version": {
+          "type": "string"
+        },
+        "service": {
+          "type": "string"
+        },
+        "status": {
+          "const": "ready"
+        }
+      },
+      "required": [
+        "status",
+        "service",
+        "protocol_version"
+      ],
+      "type": "object"
+    },
+    "ok": {
+      "const": true
+    },
+    "request_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "request_id",
+    "data"
+  ],
+  "title": "health/service_ready",
+  "type": "object"
+}

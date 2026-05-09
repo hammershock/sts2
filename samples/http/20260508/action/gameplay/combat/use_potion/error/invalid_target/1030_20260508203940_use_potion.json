@@ -1,0 +1,15 @@
+{
+  "error": {
+    "code": "invalid_target",
+    "details": {
+      "action": "use_potion",
+      "potion_id": "FIRE_POTION",
+      "target_index_space": "enemies",
+      "target_type": "AnyEnemy"
+    },
+    "message": "This potion requires target_index.",
+    "retryable": false
+  },
+  "ok": false,
+  "request_id": "req_20260508_203940_3079_1057"
+}

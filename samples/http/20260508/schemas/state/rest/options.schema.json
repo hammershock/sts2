@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "休息处选择 / 休息或锻造",
+  "properties": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "available_actions": {
+          "contains": {
+            "const": "choose_rest_option"
+          },
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "rest": {
+          "type": "object"
+        },
+        "screen": {
+          "const": "REST"
+        }
+      },
+      "required": [
+        "screen",
+        "available_actions",
+        "rest"
+      ],
+      "type": "object"
+    },
+    "ok": {
+      "const": true
+    },
+    "request_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "request_id",
+    "data"
+  ],
+  "title": "state/rest/options",
+  "type": "object"
+}

@@ -28,8 +28,20 @@ class Sts2Client:
     def health(self) -> dict[str, Any]:
         return self._get_data("/health")
 
+    def state_response(self) -> dict[str, Any]:
+        payload = self._request_json("GET", "/state")
+        self._raise_api_error(payload)
+        if not isinstance(payload, dict):
+            raise BridgeError(
+                "invalid_state_response",
+                "Mod API returned a non-object state payload.",
+                details={"payload_type": type(payload).__name__},
+                retryable=False,
+            )
+        return payload
+
     def state(self) -> GameState:
-        data = self._get_data("/state")
+        data = _response_data(self.state_response())
         try:
             return GameState.model_validate(data)
         except ValidationError as exc:
@@ -54,10 +66,33 @@ class Sts2Client:
                     return ActionResult(status=data.get("status"), state=GameState.model_validate(state_data))
         return ActionResult(status="completed")
 
+    def action_response(self, action: str, args: Mapping[str, Any] | None = None) -> dict[str, Any]:
+        payload: dict[str, Any] = {"action": action}
+        if args:
+            payload.update(dict(args))
+        data = self._request_json("POST", "/action", json=payload)
+        if not isinstance(data, dict):
+            raise BridgeError(
+                "invalid_action_response",
+                "Mod API returned a non-object action payload.",
+                details={"action": action, "payload_type": type(data).__name__},
+                retryable=False,
+            )
+        return data
+
     def _get_data(self, path: str) -> Any:
         return self._request_data("GET", path)
 
     def _request_data(self, method: str, path: str, **kwargs: Any) -> Any:
+        payload = self._request_json(method, path, **kwargs)
+        self._raise_api_error(payload)
+        if isinstance(payload, dict) and "ok" in payload:
+            envelope = ApiEnvelope.model_validate(payload)
+            if envelope.ok:
+                return envelope.data
+        return payload
+
+    def _request_json(self, method: str, path: str, **kwargs: Any) -> Any:
         url = f"{self.base_url}{path}"
         started_at = _now_iso()
         started_monotonic = time.monotonic()
@@ -129,17 +164,8 @@ class Sts2Client:
                 retryable=False,
             ) from exc
 
-        if isinstance(payload, dict) and "ok" in payload:
-            envelope = ApiEnvelope.model_validate(payload)
-            if envelope.ok:
-                return envelope.data
-            error = envelope.error
-            raise BridgeError(
-                error.code if error else "api_error",
-                error.message if error else "Mod API returned ok=false.",
-                details=(error.details or {} if error else {"payload": payload}),
-                retryable=(error.retryable if error else False),
-            )
+        if isinstance(payload, dict) and payload.get("ok") is False:
+            return payload
 
         if response.is_error:
             raise BridgeError(
@@ -150,3 +176,23 @@ class Sts2Client:
             )
 
         return payload
+
+    def _raise_api_error(self, payload: Any) -> None:
+        if not isinstance(payload, dict) or "ok" not in payload:
+            return
+        envelope = ApiEnvelope.model_validate(payload)
+        if envelope.ok:
+            return
+        error = envelope.error
+        raise BridgeError(
+            error.code if error else "api_error",
+            error.message if error else "Mod API returned ok=false.",
+            details=(error.details or {} if error else {"payload": payload}),
+            retryable=(error.retryable if error else False),
+        )
+
+
+def _response_data(payload: Any) -> Any:
+    if isinstance(payload, dict) and isinstance(payload.get("data"), dict):
+        return payload["data"]
+    return payload

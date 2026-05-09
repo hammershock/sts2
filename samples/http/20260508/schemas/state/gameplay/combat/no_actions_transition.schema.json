@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "游戏内界面 / 战斗无可用动作过渡态",
+  "properties": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "available_actions": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 0,
+          "type": "array"
+        },
+        "combat": {
+          "type": "object"
+        },
+        "screen": {
+          "const": "COMBAT"
+        }
+      },
+      "required": [
+        "screen",
+        "available_actions",
+        "combat"
+      ],
+      "type": "object"
+    },
+    "ok": {
+      "const": true
+    },
+    "request_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "request_id",
+    "data"
+  ],
+  "title": "state/gameplay/combat/no_actions_transition",
+  "type": "object"
+}

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "action": {
+          "const": "play_card"
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "stable": {
+          "type": "boolean"
+        },
+        "state": {
+          "type": "object"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "status",
+        "stable",
+        "message",
+        "state"
+      ],
+      "type": "object"
+    },
+    "ok": {
+      "const": true
+    },
+    "request_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "request_id",
+    "data"
+  ],
+  "title": "action/gameplay/combat/play_card/success",
+  "type": "object"
+}

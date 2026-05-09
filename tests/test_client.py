@@ -55,6 +55,30 @@ def test_act_posts_generic_action_payload(isolated_logs) -> None:
 
 
 @respx.mock
+def test_action_response_returns_raw_error_payload() -> None:
+    respx.post(f"{BASE_URL}/action").mock(
+        return_value=httpx.Response(
+            409,
+            json={
+                "ok": False,
+                "request_id": "req_error",
+                "error": {
+                    "code": "invalid_target",
+                    "message": "target required",
+                    "details": {"action": "play_card"},
+                    "retryable": False,
+                },
+            },
+        )
+    )
+
+    data = Sts2Client(BASE_URL).action_response("play_card", {"card_index": 0})
+
+    assert data["ok"] is False
+    assert data["error"]["code"] == "invalid_target"
+
+
+@respx.mock
 def test_api_error_raises_bridge_error() -> None:
     respx.get(f"{BASE_URL}/state").mock(
         return_value=httpx.Response(

@@ -11,6 +11,8 @@ fields:
     transform: shop
   rest: rest
   character_select: character_select
+  timeline:
+    transform: timeline
   modal: modal
   game_over:
     transform: game_over

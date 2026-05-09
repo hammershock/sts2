@@ -1,0 +1,12 @@
+{
+  "error": {
+    "code": "invalid_request",
+    "details": {
+      "action": "choose_treasure_relic"
+    },
+    "message": "choose_treasure_relic requires option_index.",
+    "retryable": false
+  },
+  "ok": false,
+  "request_id": "req_20260508_213441_4359_1495"
+}

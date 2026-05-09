@@ -1,0 +1,869 @@
+{
+  "categories": [
+    {
+      "category": "action/card_selection/confirm_selection/success",
+      "label": "action/card_selection/confirm_selection/success",
+      "record_count": 4,
+      "request_action_counts": {
+        "confirm_selection": 4
+      },
+      "samples": [
+        "samples/http/20260508/action/card_selection/confirm_selection/success/0282_20260508192918_confirm_selection.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/card_selection/confirm_selection/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 4
+      }
+    },
+    {
+      "category": "action/card_selection/select_deck_card/success",
+      "label": "action/card_selection/select_deck_card/success",
+      "record_count": 113,
+      "request_action_counts": {
+        "select_deck_card": 113
+      },
+      "samples": [
+        "samples/http/20260508/action/card_selection/select_deck_card/success/0114_20260508190932_select_deck_card.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/card_selection/select_deck_card/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 113
+      }
+    },
+    {
+      "category": "action/chest/choose_treasure_relic/error/invalid_request",
+      "label": "action/chest/choose_treasure_relic/error/invalid_request",
+      "record_count": 1,
+      "request_action_counts": {
+        "choose_treasure_relic": 1
+      },
+      "samples": [
+        "samples/http/20260508/action/chest/choose_treasure_relic/error/invalid_request/1468_20260508213441_choose_treasure_relic.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/chest/choose_treasure_relic/error/invalid_request.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "400": 1
+      }
+    },
+    {
+      "category": "action/chest/choose_treasure_relic/success",
+      "label": "action/chest/choose_treasure_relic/success",
+      "record_count": 2,
+      "request_action_counts": {
+        "choose_treasure_relic": 2
+      },
+      "samples": [
+        "samples/http/20260508/action/chest/choose_treasure_relic/success/1471_20260508213459_choose_treasure_relic.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/chest/choose_treasure_relic/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 2
+      }
+    },
+    {
+      "category": "action/chest/open_chest/success",
+      "label": "action/chest/open_chest/success",
+      "record_count": 3,
+      "request_action_counts": {
+        "open_chest": 3
+      },
+      "samples": [
+        "samples/http/20260508/action/chest/open_chest/success/0565_20260508194510_open_chest.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/chest/open_chest/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 3
+      }
+    },
+    {
+      "category": "action/event/choose_event_option/success",
+      "label": "action/event/choose_event_option/success",
+      "record_count": 18,
+      "request_action_counts": {
+        "choose_event_option": 18
+      },
+      "samples": [
+        "samples/http/20260508/action/event/choose_event_option/success/0333_20260508193206_choose_event_option.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/event/choose_event_option/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 18
+      }
+    },
+    {
+      "category": "action/event/choose_event_option/transport_error",
+      "label": "action/event/choose_event_option/transport_error",
+      "record_count": 2,
+      "request_action_counts": {
+        "choose_event_option": 2
+      },
+      "samples": [],
+      "schema": null,
+      "screen_counts": {},
+      "status_counts": {
+        "None": 2
+      }
+    },
+    {
+      "category": "action/gameplay/combat/end_turn/success",
+      "label": "action/gameplay/combat/end_turn/success",
+      "record_count": 95,
+      "request_action_counts": {
+        "end_turn": 95
+      },
+      "samples": [
+        "samples/http/20260508/action/gameplay/combat/end_turn/success/0007_20260508190241_end_turn.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/gameplay/combat/end_turn/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 95
+      }
+    },
+    {
+      "category": "action/gameplay/combat/play_card/error/invalid_target",
+      "label": "action/gameplay/combat/play_card/error/invalid_target",
+      "record_count": 3,
+      "request_action_counts": {
+        "play_card": 3
+      },
+      "samples": [
+        "samples/http/20260508/action/gameplay/combat/play_card/error/invalid_target/1239_20260508210754_play_card.json",
+        "samples/http/20260508/action/gameplay/combat/play_card/error/invalid_target/1354_20260508212256_play_card.json",
+        "samples/http/20260508/action/gameplay/combat/play_card/error/invalid_target/2544_20260508230420_play_card.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/gameplay/combat/play_card/error/invalid_target.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "409": 3
+      }
+    },
+    {
+      "category": "action/gameplay/combat/play_card/success",
+      "label": "action/gameplay/combat/play_card/success",
+      "record_count": 517,
+      "request_action_counts": {
+        "play_card": 517
+      },
+      "samples": [
+        "samples/http/20260508/action/gameplay/combat/play_card/success/0003_20260508190224_play_card.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/gameplay/combat/play_card/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 517
+      }
+    },
+    {
+      "category": "action/gameplay/combat/use_potion/error/invalid_request",
+      "label": "action/gameplay/combat/use_potion/error/invalid_request",
+      "record_count": 1,
+      "request_action_counts": {
+        "use_potion": 1
+      },
+      "samples": [
+        "samples/http/20260508/action/gameplay/combat/use_potion/error/invalid_request/0175_20260508191534_use_potion.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/gameplay/combat/use_potion/error/invalid_request.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "400": 1
+      }
+    },
+    {
+      "category": "action/gameplay/combat/use_potion/error/invalid_target",
+      "label": "action/gameplay/combat/use_potion/error/invalid_target",
+      "record_count": 1,
+      "request_action_counts": {
+        "use_potion": 1
+      },
+      "samples": [
+        "samples/http/20260508/action/gameplay/combat/use_potion/error/invalid_target/1030_20260508203940_use_potion.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/gameplay/combat/use_potion/error/invalid_target.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "409": 1
+      }
+    },
+    {
+      "category": "action/gameplay/combat/use_potion/success",
+      "label": "action/gameplay/combat/use_potion/success",
+      "record_count": 9,
+      "request_action_counts": {
+        "use_potion": 9
+      },
+      "samples": [
+        "samples/http/20260508/action/gameplay/combat/use_potion/success/0177_20260508191543_use_potion.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/gameplay/combat/use_potion/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 9
+      }
+    },
+    {
+      "category": "action/map/choose_map_node/success",
+      "label": "action/map/choose_map_node/success",
+      "record_count": 45,
+      "request_action_counts": {
+        "choose_map_node": 45
+      },
+      "samples": [
+        "samples/http/20260508/action/map/choose_map_node/success/0080_20260508190637_choose_map_node.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/map/choose_map_node/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 45
+      }
+    },
+    {
+      "category": "action/navigation/proceed/success",
+      "label": "action/navigation/proceed/success",
+      "record_count": 19,
+      "request_action_counts": {
+        "proceed": 19
+      },
+      "samples": [
+        "samples/http/20260508/action/navigation/proceed/success/0166_20260508191454_proceed.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/navigation/proceed/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 19
+      }
+    },
+    {
+      "category": "action/rest/choose_rest_option/error/invalid_action",
+      "label": "action/rest/choose_rest_option/error/invalid_action",
+      "record_count": 1,
+      "request_action_counts": {
+        "choose_rest_option": 1
+      },
+      "samples": [
+        "samples/http/20260508/action/rest/choose_rest_option/error/invalid_action/0774_20260508200554_choose_rest_option.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/rest/choose_rest_option/error/invalid_action.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "409": 1
+      }
+    },
+    {
+      "category": "action/rest/choose_rest_option/success",
+      "label": "action/rest/choose_rest_option/success",
+      "record_count": 11,
+      "request_action_counts": {
+        "choose_rest_option": 11
+      },
+      "samples": [
+        "samples/http/20260508/action/rest/choose_rest_option/success/0316_20260508193051_choose_rest_option.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/rest/choose_rest_option/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 11
+      }
+    },
+    {
+      "category": "action/reward/choose_reward_card/success",
+      "label": "action/reward/choose_reward_card/success",
+      "record_count": 15,
+      "request_action_counts": {
+        "choose_reward_card": 15
+      },
+      "samples": [
+        "samples/http/20260508/action/reward/choose_reward_card/success/0137_20260508191116_choose_reward_card.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/reward/choose_reward_card/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 15
+      }
+    },
+    {
+      "category": "action/reward/claim_reward/success",
+      "label": "action/reward/claim_reward/success",
+      "record_count": 38,
+      "request_action_counts": {
+        "claim_reward": 38
+      },
+      "samples": [
+        "samples/http/20260508/action/reward/claim_reward/success/0130_20260508191046_claim_reward.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/reward/claim_reward/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 38
+      }
+    },
+    {
+      "category": "action/reward/collect_and_proceed/success",
+      "label": "action/reward/collect_and_proceed/success",
+      "record_count": 16,
+      "request_action_counts": {
+        "collect_rewards_and_proceed": 16
+      },
+      "samples": [
+        "samples/http/20260508/action/reward/collect_and_proceed/success/0140_20260508191125_collect_rewards_and_proceed.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/reward/collect_and_proceed/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 16
+      }
+    },
+    {
+      "category": "action/reward/resolve_rewards/success",
+      "label": "action/reward/resolve_rewards/success",
+      "record_count": 3,
+      "request_action_counts": {
+        "resolve_rewards": 3
+      },
+      "samples": [
+        "samples/http/20260508/action/reward/resolve_rewards/success/0077_20260508190620_resolve_rewards.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/reward/resolve_rewards/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 3
+      }
+    },
+    {
+      "category": "action/shop/buy_card/error/invalid_request",
+      "label": "action/shop/buy_card/error/invalid_request",
+      "record_count": 1,
+      "request_action_counts": {
+        "buy_card": 1
+      },
+      "samples": [
+        "samples/http/20260508/action/shop/buy_card/error/invalid_request/0153_20260508191405_buy_card.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/shop/buy_card/error/invalid_request.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "400": 1
+      }
+    },
+    {
+      "category": "action/shop/buy_card/success",
+      "label": "action/shop/buy_card/success",
+      "record_count": 9,
+      "request_action_counts": {
+        "buy_card": 9
+      },
+      "samples": [
+        "samples/http/20260508/action/shop/buy_card/success/0155_20260508191415_buy_card.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/shop/buy_card/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 9
+      }
+    },
+    {
+      "category": "action/shop/buy_relic/success",
+      "label": "action/shop/buy_relic/success",
+      "record_count": 1,
+      "request_action_counts": {
+        "buy_relic": 1
+      },
+      "samples": [
+        "samples/http/20260508/action/shop/buy_relic/success/1416_20260508212958_buy_relic.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/shop/buy_relic/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 1
+      }
+    },
+    {
+      "category": "action/shop/close_inventory/success",
+      "label": "action/shop/close_inventory/success",
+      "record_count": 5,
+      "request_action_counts": {
+        "close_shop_inventory": 5
+      },
+      "samples": [
+        "samples/http/20260508/action/shop/close_inventory/success/0162_20260508191445_close_shop_inventory.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/shop/close_inventory/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 5
+      }
+    },
+    {
+      "category": "action/shop/open_inventory/success",
+      "label": "action/shop/open_inventory/success",
+      "record_count": 5,
+      "request_action_counts": {
+        "open_shop_inventory": 5
+      },
+      "samples": [
+        "samples/http/20260508/action/shop/open_inventory/success/0149_20260508191342_open_shop_inventory.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/shop/open_inventory/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 5
+      }
+    },
+    {
+      "category": "action/shop/remove_card/success",
+      "label": "action/shop/remove_card/success",
+      "record_count": 1,
+      "request_action_counts": {
+        "remove_card_at_shop": 1
+      },
+      "samples": [
+        "samples/http/20260508/action/shop/remove_card/success/2314_20260508224148_remove_card_at_shop.json"
+      ],
+      "schema": "samples/http/20260508/schemas/action/shop/remove_card/success.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 1
+      }
+    },
+    {
+      "category": "health/service_ready",
+      "label": "health/service_ready",
+      "record_count": 1,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/health/service_ready/0695_20260508194719_health.json"
+      ],
+      "schema": "samples/http/20260508/schemas/health/service_ready.schema.json",
+      "screen_counts": {},
+      "status_counts": {
+        "200": 1
+      }
+    },
+    {
+      "category": "state/card_selection/combat_discard",
+      "label": "卡牌选择 / 战斗弃牌",
+      "record_count": 110,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/card_selection/combat_discard/0113_20260508190932_card_selection.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/card_selection/combat_discard.schema.json",
+      "screen_counts": {
+        "CARD_SELECTION": 110
+      },
+      "status_counts": {
+        "200": 110
+      }
+    },
+    {
+      "category": "state/card_selection/combat_retain",
+      "label": "卡牌选择 / 战斗保留手牌",
+      "record_count": 80,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/card_selection/combat_retain/0204_20260508192538_card_selection.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/card_selection/combat_retain.schema.json",
+      "screen_counts": {
+        "CARD_SELECTION": 80
+      },
+      "status_counts": {
+        "200": 80
+      }
+    },
+    {
+      "category": "state/card_selection/deck_remove",
+      "label": "卡组移除选择",
+      "record_count": 2,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/card_selection/deck_remove/2315_20260508224148_card_selection.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/card_selection/deck_remove.schema.json",
+      "screen_counts": {
+        "CARD_SELECTION": 2
+      },
+      "status_counts": {
+        "200": 2
+      }
+    },
+    {
+      "category": "state/card_selection/deck_upgrade",
+      "label": "卡组升级选择",
+      "record_count": 12,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/card_selection/deck_upgrade/0317_20260508193051_card_selection.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/card_selection/deck_upgrade.schema.json",
+      "screen_counts": {
+        "CARD_SELECTION": 12
+      },
+      "status_counts": {
+        "200": 12
+      }
+    },
+    {
+      "category": "state/card_selection/generic_card_choice",
+      "label": "卡牌选择 / 通用选牌",
+      "record_count": 1,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/card_selection/generic_card_choice/1012_20260508203731_card_selection.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/card_selection/generic_card_choice.schema.json",
+      "screen_counts": {
+        "CARD_SELECTION": 1
+      },
+      "status_counts": {
+        "200": 1
+      }
+    },
+    {
+      "category": "state/chest/open",
+      "label": "宝箱 / 开箱",
+      "record_count": 7,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/chest/open/0562_20260508194454_chest.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/chest/open.schema.json",
+      "screen_counts": {
+        "CHEST": 7
+      },
+      "status_counts": {
+        "200": 7
+      }
+    },
+    {
+      "category": "state/chest/proceed",
+      "label": "宝箱 / 继续",
+      "record_count": 4,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/chest/proceed/1472_20260508213459_chest.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/chest/proceed.schema.json",
+      "screen_counts": {
+        "CHEST": 4
+      },
+      "status_counts": {
+        "200": 4
+      }
+    },
+    {
+      "category": "state/chest/relic_choice",
+      "label": "宝箱 / 遗物选择",
+      "record_count": 8,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/chest/relic_choice/0566_20260508194521_chest.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/chest/relic_choice.schema.json",
+      "screen_counts": {
+        "CHEST": 8
+      },
+      "status_counts": {
+        "200": 8
+      }
+    },
+    {
+      "category": "state/event/choice",
+      "label": "随机事件选择",
+      "record_count": 48,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/event/choice/0328_20260508193121_event.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/event/choice.schema.json",
+      "screen_counts": {
+        "EVENT": 48
+      },
+      "status_counts": {
+        "200": 48
+      }
+    },
+    {
+      "category": "state/game_menu/game_over",
+      "label": "游戏菜单 / 结算",
+      "record_count": 2,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/game_menu/game_over/3111_20260508235528_game_over.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/game_menu/game_over.schema.json",
+      "screen_counts": {
+        "GAME_OVER": 2
+      },
+      "status_counts": {
+        "200": 2
+      }
+    },
+    {
+      "category": "state/game_menu/unknown",
+      "label": "游戏菜单 / 未知或空状态",
+      "record_count": 5,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/game_menu/unknown/0999_20260508203406_unknown.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/game_menu/unknown.schema.json",
+      "screen_counts": {
+        "COMBAT": 2,
+        "UNKNOWN": 3
+      },
+      "status_counts": {
+        "200": 5
+      }
+    },
+    {
+      "category": "state/gameplay/combat/actionable",
+      "label": "游戏内界面 / 战斗出牌与结束回合",
+      "record_count": 801,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/gameplay/combat/actionable/0001_20260508190215_combat.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/gameplay/combat/actionable.schema.json",
+      "screen_counts": {
+        "COMBAT": 801
+      },
+      "status_counts": {
+        "200": 801
+      }
+    },
+    {
+      "category": "state/gameplay/combat/end_turn_only",
+      "label": "游戏内界面 / 战斗只能结束回合",
+      "record_count": 112,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/gameplay/combat/end_turn_only/0006_20260508190241_combat.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/gameplay/combat/end_turn_only.schema.json",
+      "screen_counts": {
+        "COMBAT": 112
+      },
+      "status_counts": {
+        "200": 112
+      }
+    },
+    {
+      "category": "state/gameplay/combat/no_actions_transition",
+      "label": "游戏内界面 / 战斗无可用动作过渡态",
+      "record_count": 258,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/gameplay/combat/no_actions_transition/0030_20260508190427_combat.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/gameplay/combat/no_actions_transition.schema.json",
+      "screen_counts": {
+        "COMBAT": 258
+      },
+      "status_counts": {
+        "200": 258
+      }
+    },
+    {
+      "category": "state/gameplay/combat/potion_and_combat",
+      "label": "游戏内界面 / 战斗含药水动作",
+      "record_count": 173,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/gameplay/combat/potion_and_combat/0081_20260508190642_combat.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/gameplay/combat/potion_and_combat.schema.json",
+      "screen_counts": {
+        "COMBAT": 173
+      },
+      "status_counts": {
+        "200": 173
+      }
+    },
+    {
+      "category": "state/gameplay/combat/potion_only",
+      "label": "游戏内界面 / 战斗药水或过渡态",
+      "record_count": 7,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/gameplay/combat/potion_only/0091_20260508190723_combat.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/gameplay/combat/potion_only.schema.json",
+      "screen_counts": {
+        "COMBAT": 7
+      },
+      "status_counts": {
+        "200": 7
+      }
+    },
+    {
+      "category": "state/map/route_selection",
+      "label": "地图路线选择",
+      "record_count": 93,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/map/route_selection/0078_20260508190621_map.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/map/route_selection.schema.json",
+      "screen_counts": {
+        "MAP": 93
+      },
+      "status_counts": {
+        "200": 93
+      }
+    },
+    {
+      "category": "state/rest/options",
+      "label": "休息处选择 / 休息或锻造",
+      "record_count": 25,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/rest/options/0312_20260508193022_rest.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/rest/options.schema.json",
+      "screen_counts": {
+        "REST": 25
+      },
+      "status_counts": {
+        "200": 25
+      }
+    },
+    {
+      "category": "state/rest/potion_only",
+      "label": "休息处选择 / 仅药水动作",
+      "record_count": 33,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/rest/potion_only/0970_20260508202745_rest.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/rest/potion_only.schema.json",
+      "screen_counts": {
+        "REST": 33
+      },
+      "status_counts": {
+        "200": 33
+      }
+    },
+    {
+      "category": "state/rest/proceed",
+      "label": "休息处选择 / 休息后继续",
+      "record_count": 36,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/rest/proceed/0320_20260508193101_rest.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/rest/proceed.schema.json",
+      "screen_counts": {
+        "REST": 36
+      },
+      "status_counts": {
+        "200": 36
+      }
+    },
+    {
+      "category": "state/rest/recovery_or_wait",
+      "label": "休息处选择 / 无动作或恢复等待",
+      "record_count": 161,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/rest/recovery_or_wait/0576_20260508194550_rest.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/rest/recovery_or_wait.schema.json",
+      "screen_counts": {
+        "REST": 161
+      },
+      "status_counts": {
+        "200": 161
+      }
+    },
+    {
+      "category": "state/reward/card_choice",
+      "label": "奖励选择 / 选卡详情",
+      "record_count": 26,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/reward/card_choice/0134_20260508191056_card_selection.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/reward/card_choice.schema.json",
+      "screen_counts": {
+        "CARD_SELECTION": 26
+      },
+      "status_counts": {
+        "200": 26
+      }
+    },
+    {
+      "category": "state/reward/collect_or_resolve",
+      "label": "奖励选择 / 收集或结算",
+      "record_count": 23,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/reward/collect_or_resolve/0138_20260508191116_reward.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/reward/collect_or_resolve.schema.json",
+      "screen_counts": {
+        "REWARD": 23
+      },
+      "status_counts": {
+        "200": 23
+      }
+    },
+    {
+      "category": "state/reward/rows",
+      "label": "奖励选择 / 奖励行",
+      "record_count": 85,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/reward/rows/0074_20260508190611_reward.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/reward/rows.schema.json",
+      "screen_counts": {
+        "REWARD": 85
+      },
+      "status_counts": {
+        "200": 85
+      }
+    },
+    {
+      "category": "state/shop/closed",
+      "label": "商店选择 / 店外入口",
+      "record_count": 23,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/shop/closed/0146_20260508191326_shop.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/shop/closed.schema.json",
+      "screen_counts": {
+        "SHOP": 23
+      },
+      "status_counts": {
+        "200": 23
+      }
+    },
+    {
+      "category": "state/shop/inventory",
+      "label": "商店选择 / 店内购买与移除",
+      "record_count": 37,
+      "request_action_counts": {},
+      "samples": [
+        "samples/http/20260508/state/shop/inventory/0150_20260508191342_shop.json"
+      ],
+      "schema": "samples/http/20260508/schemas/state/shop/inventory.schema.json",
+      "screen_counts": {
+        "SHOP": 37
+      },
+      "status_counts": {
+        "200": 37
+      }
+    }
+  ],
+  "record_count": 3112,
+  "source": "logs/http/20260508.jsonl"
+}

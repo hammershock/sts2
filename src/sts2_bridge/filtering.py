@@ -69,6 +69,8 @@ def _state_schema_name(state: GameState, view: str) -> str:
         return "state/shop.yaml"
     if state.screen == "GAME_OVER":
         return "state/game_over.yaml"
+    if state.screen == "MAIN_MENU":
+        return "state/main_menu.yaml"
     return "state/common.yaml"
 
 
@@ -160,6 +162,8 @@ def _transform(root: Any, current: Any, rule: Schema, state: Any) -> Any:
         return _shop_view(root)
     if name == "game_over":
         return _game_over_view(root)
+    if name == "timeline":
+        return _timeline_view(root)
     if name == "incoming_damage":
         if isinstance(root, GameState):
             return estimate_incoming_damage(root)
@@ -596,6 +600,58 @@ def _player_is_dead(player: dict[str, Any] | None, hp: dict[str, Any]) -> bool:
     if not isinstance(player, dict):
         return False
     return player.get("is_alive") is False or hp.get("current") == 0
+
+
+def _timeline_view(root: Any) -> dict[str, Any]:
+    timeline = _get_path(root, "timeline")
+    if not isinstance(timeline, dict):
+        return {}
+    return {
+        "back_enabled": timeline.get("back_enabled"),
+        "inspect_open": timeline.get("inspect_open"),
+        "unlock_screen_open": timeline.get("unlock_screen_open"),
+        "can_choose_epoch": timeline.get("can_choose_epoch"),
+        "can_confirm_overlay": timeline.get("can_confirm_overlay"),
+        "slots": _timeline_slots(timeline),
+        "overlay": _timeline_overlay(timeline),
+    }
+
+
+def _timeline_slots(timeline: dict[str, Any]) -> list[dict[str, Any]]:
+    slots = timeline.get("slots")
+    if not isinstance(slots, list):
+        return []
+    result: list[dict[str, Any]] = []
+    for index, slot in enumerate(slots):
+        if not isinstance(slot, dict):
+            continue
+        result.append(
+            {
+                "option_index": slot.get("index", index),
+                "epoch_id": slot.get("epoch_id"),
+                "title": slot.get("title"),
+                "state": slot.get("state"),
+                "actionable": slot.get("is_actionable"),
+            }
+        )
+    return result
+
+
+def _timeline_overlay(timeline: dict[str, Any]) -> dict[str, Any]:
+    overlay_keys = ("selected_epoch", "selected_slot", "overlay", "inspect", "details")
+    overlay = next((timeline.get(key) for key in overlay_keys if isinstance(timeline.get(key), dict)), None)
+    if not timeline.get("inspect_open"):
+        return {}
+    if not isinstance(overlay, dict):
+        return {"open": True, "content_available": False}
+    return {
+        "open": True,
+        "content_available": True,
+        "option_index": overlay.get("index") or overlay.get("option_index"),
+        "epoch_id": overlay.get("epoch_id") or overlay.get("id"),
+        "title": overlay.get("title") or overlay.get("name"),
+        "text": overlay.get("text") or overlay.get("description") or overlay.get("summary"),
+    }
 
 
 def _indexed_agent_lines(items: Any) -> dict[int, str]:

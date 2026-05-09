@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "error": {
+      "additionalProperties": true,
+      "properties": {
+        "code": {
+          "const": "invalid_target"
+        },
+        "details": {
+          "additionalProperties": true,
+          "properties": {
+            "action": {
+              "const": "play_card"
+            }
+          },
+          "type": "object"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "details",
+        "retryable"
+      ],
+      "type": "object"
+    },
+    "ok": {
+      "const": false
+    },
+    "request_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "request_id",
+    "error"
+  ],
+  "title": "action/gameplay/combat/play_card/error/invalid_target",
+  "type": "object"
+}

@@ -1,0 +1,14 @@
+{
+  "error": {
+    "code": "invalid_target",
+    "details": {
+      "action": "play_card",
+      "card_index": 7,
+      "hand_count": 7
+    },
+    "message": "card_index is out of range.",
+    "retryable": false
+  },
+  "ok": false,
+  "request_id": "req_20260508_210754_2105_1266"
+}

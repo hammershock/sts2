@@ -21,6 +21,8 @@ def render_state_view(data: dict[str, Any]) -> str:
         return render_shop_view(data)
     if data.get("screen") == "GAME_OVER" and isinstance(data.get("game_over"), dict):
         return render_game_over_view(data)
+    if data.get("screen") == "MAIN_MENU" and isinstance(data.get("timeline"), dict):
+        return render_main_menu_view(data)
     return render_generic_view(data)
 
 
@@ -296,6 +298,45 @@ def render_game_over_view(data: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def render_main_menu_view(data: dict[str, Any]) -> str:
+    timeline = data.get("timeline") or {}
+    lines = [_header_line(data)]
+    if timeline:
+        status = []
+        if timeline.get("inspect_open"):
+            status.append("inspect_open")
+        if timeline.get("can_confirm_overlay"):
+            status.append("can_confirm")
+        if timeline.get("can_choose_epoch"):
+            status.append("can_choose")
+        if status:
+            lines.append(f"Timeline: {', '.join(status)}")
+
+        overlay = timeline.get("overlay") or {}
+        if overlay.get("open"):
+            if overlay.get("content_available"):
+                title = overlay.get("title") or overlay.get("epoch_id") or "selected epoch"
+                text = overlay.get("text")
+                lines.append(f"Overlay: {_one_line(title)}")
+                if text:
+                    lines.append(f"Overlay text: {_one_line(text)}")
+            else:
+                lines.append("Overlay: open, content unavailable from API")
+
+        slots = timeline.get("slots") or []
+        if slots:
+            lines.extend(["", "Timeline slots:"])
+            for slot in slots:
+                lines.append(_timeline_slot_line(slot))
+
+    actions = data.get("available_actions") or []
+    if actions:
+        lines.extend(["", "Legal actions:"])
+        for index, action in enumerate(actions):
+            lines.append(f"[{index}] {_action_signature(action, data)}")
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def render_reward_view(data: dict[str, Any]) -> str:
     reward = data["reward"]
     rows = reward.get("rewards") or []
@@ -507,6 +548,19 @@ def _shop_price_line(item: dict[str, Any]) -> str:
     return " ".join(traits)
 
 
+def _timeline_slot_line(slot: dict[str, Any]) -> str:
+    traits = [f"[{_value(slot.get('option_index'))}] {slot.get('title') or slot.get('epoch_id') or 'Epoch'}"]
+    if slot.get("state"):
+        traits.append(str(slot.get("state")))
+    if slot.get("epoch_id"):
+        traits.append(str(slot.get("epoch_id")))
+    if slot.get("actionable") is False:
+        traits.append("not actionable")
+    elif slot.get("actionable") is True:
+        traits.append("actionable")
+    return " | ".join(traits)
+
+
 def _reward_status(reward: dict[str, Any]) -> str:
     parts: list[str] = []
     if reward.get("pending_card_choice") is not None:
@@ -637,38 +691,122 @@ def _map_symbol(node_type: Any) -> str:
 
 def _action_signature(action: str, data: dict[str, Any]) -> str:
     if action == "play_card":
-        default_target = _default_target_index(data)
-        if default_target is None:
-            return "play_card(card_index)"
-        return f"play_card(card_index, target_index={default_target})"
-    if action in {
-        "choose_map_node",
-        "claim_reward",
-        "choose_event_option",
-        "choose_rest_option",
-        "choose_reward_card",
-        "select_character",
-        "select_deck_card",
-        "use_potion",
-        "discard_potion",
-    }:
-        return f"{action}(option_index=0)"
+        target_indices = _play_card_target_indices(data)
+        if len(target_indices) == 1:
+            return f"play_card(card_index, target_index={target_indices[0]})"
+        if len(target_indices) > 1:
+            return f"play_card(card_index, target_index in {_index_list(target_indices)})"
+        return "play_card(card_index)"
+    if _action_uses_option_index(action):
+        option_indices = _valid_option_indices(action, data)
+        if len(option_indices) == 1:
+            return f"{action}(option_index={option_indices[0]})"
+        if len(option_indices) > 1:
+            return f"{action}(option_index in {_index_list(option_indices)})"
+        if action in {"use_potion", "discard_potion"}:
+            return f"{action}(option_index, optional target_index)"
+        return f"{action}(option_index)"
     if action.startswith("buy_"):
-        return f"{action}(option_index=0)"
+        option_indices = _valid_option_indices(action, data)
+        if len(option_indices) == 1:
+            return f"{action}(option_index={option_indices[0]})"
+        if len(option_indices) > 1:
+            return f"{action}(option_index in {_index_list(option_indices)})"
+        return f"{action}(option_index)"
     if action == "resolve_rewards" and _has_claimable_card_reward((data.get("reward") or {}).get("rewards") or []):
         return "resolve_rewards(may skip unresolved card reward)"
     return action
 
 
-def _default_target_index(data: dict[str, Any]) -> int | None:
+def _action_uses_option_index(action: str) -> bool:
+    return action in {
+        "choose_map_node",
+        "claim_reward",
+        "choose_event_option",
+        "choose_rest_option",
+        "choose_reward_card",
+        "choose_timeline_epoch",
+        "select_character",
+        "select_deck_card",
+        "use_potion",
+        "discard_potion",
+    }
+
+
+def _valid_option_indices(action: str, data: dict[str, Any]) -> list[int]:
+    if action == "choose_map_node":
+        return _indices((data.get("map") or {}).get("choices"))
+    if action == "choose_event_option":
+        return _indices((data.get("event") or {}).get("options"), unlocked_only=True)
+    if action == "choose_timeline_epoch":
+        return _indices((data.get("timeline") or {}).get("slots"), actionable_only=True)
+    if action == "choose_rest_option":
+        return _indices((data.get("rest") or {}).get("options"), actionable_only=True, unlocked_only=True)
+    if action == "claim_reward":
+        return _indices((data.get("reward") or {}).get("rewards"), claimable_only=True)
+    if action == "choose_reward_card":
+        return _indices((data.get("reward") or {}).get("card_options"))
+    if action == "select_deck_card":
+        return _indices((data.get("selection") or {}).get("cards"))
+    if action == "buy_card":
+        return _indices((data.get("shop") or {}).get("cards"), affordable_only=True)
+    if action == "buy_relic":
+        return _indices((data.get("shop") or {}).get("relics"), affordable_only=True)
+    if action == "buy_potion":
+        return _indices((data.get("shop") or {}).get("potions"), affordable_only=True)
+    if action in {"use_potion", "discard_potion"}:
+        potions = data.get("potions") or []
+        key = "can_use" if action == "use_potion" else "can_discard"
+        return [
+            int(potion["index"])
+            for potion in potions
+            if isinstance(potion, dict) and potion.get(key) and isinstance(potion.get("index"), int)
+        ]
+    return []
+
+
+def _indices(
+    items: Any,
+    *,
+    actionable_only: bool = False,
+    unlocked_only: bool = False,
+    claimable_only: bool = False,
+    affordable_only: bool = False,
+) -> list[int]:
+    if not isinstance(items, list):
+        return []
+    indices: list[int] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if actionable_only and item.get("actionable") is False:
+            continue
+        if unlocked_only and item.get("locked") is True:
+            continue
+        if claimable_only and item.get("claimable") is False:
+            continue
+        if affordable_only and item.get("affordable") is False:
+            continue
+        index = item.get("option_index")
+        if isinstance(index, int):
+            indices.append(index)
+    return indices
+
+
+def _index_list(indices: list[int]) -> str:
+    return ", ".join(str(index) for index in indices)
+
+
+def _play_card_target_indices(data: dict[str, Any]) -> list[int]:
     combat = data.get("combat") or {}
     playable = combat.get("playable") or combat.get("playable_cards") or []
+    target_indices: list[int] = []
     for card in playable:
         for target in card.get("valid_targets") or []:
             target_index = target.get("target_index")
-            if target_index is not None:
-                return target_index
-    return None
+            if isinstance(target_index, int) and target_index not in target_indices:
+                target_indices.append(target_index)
+    return target_indices
 
 
 def _hp(hp: dict[str, Any]) -> str:

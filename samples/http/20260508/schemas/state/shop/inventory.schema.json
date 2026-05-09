@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "商店选择 / 店内购买与移除",
+  "properties": {
+    "data": {
+      "additionalProperties": true,
+      "properties": {
+        "available_actions": {
+          "contains": {
+            "const": "close_shop_inventory"
+          },
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "screen": {
+          "const": "SHOP"
+        },
+        "shop": {
+          "properties": {
+            "is_open": {
+              "const": true
+            }
+          },
+          "required": [
+            "is_open"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "screen",
+        "available_actions",
+        "shop"
+      ],
+      "type": "object"
+    },
+    "ok": {
+      "const": true
+    },
+    "request_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "request_id",
+    "data"
+  ],
+  "title": "state/shop/inventory",
+  "type": "object"
+}

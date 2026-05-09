@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "error": {
+      "additionalProperties": true,
+      "properties": {
+        "code": {
+          "const": "invalid_action"
+        },
+        "details": {
+          "additionalProperties": true,
+          "properties": {
+            "action": {
+              "const": "choose_rest_option"
+            }
+          },
+          "type": "object"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "details",
+        "retryable"
+      ],
+      "type": "object"
+    },
+    "ok": {
+      "const": false
+    },
+    "request_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ok",
+    "request_id",
+    "error"
+  ],
+  "title": "action/rest/choose_rest_option/error/invalid_action",
+  "type": "object"
+}

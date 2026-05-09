@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "data": {
+    "state_version": 9,
+    "run_id": "timeline-test",
+    "screen": "MAIN_MENU",
+    "available_actions": ["close_main_menu_submenu", "choose_timeline_epoch"],
+    "timeline": {
+      "back_enabled": true,
+      "inspect_open": false,
+      "unlock_screen_open": false,
+      "can_choose_epoch": true,
+      "can_confirm_overlay": false,
+      "slots": [
+        {
+          "index": 0,
+          "epoch_id": "COLORLESS1_EPOCH",
+          "title": "先子星",
+          "state": "complete",
+          "is_actionable": true
+        },
+        {
+          "index": 1,
+          "epoch_id": "SILENT_EPOCH",
+          "title": "猎手",
+          "state": "complete",
+          "is_actionable": true
+        },
+        {
+          "index": 6,
+          "epoch_id": "NEOW_EPOCH",
+          "title": "涅奥",
+          "state": "complete",
+          "is_actionable": true
+        }
+      ]
+    }
+  }
+}

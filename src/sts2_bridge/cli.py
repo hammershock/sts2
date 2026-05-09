@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
 from typing import Annotated, Any
+from urllib.parse import urlparse
 
 import click
 import typer
@@ -12,15 +15,15 @@ import yaml
 from pydantic import BaseModel
 
 from sts2_bridge.action_args import parse_action_args, resolve_action
+from sts2_bridge.action_view import render_action_response, route_action_response
 from sts2_bridge.agent_view import (
-    build_action_result_view,
-    build_actions_view,
-    build_agent_view,
     build_state_view,
 )
 from sts2_bridge.client import DEFAULT_BASE_URL, Sts2Client
 from sts2_bridge.models import BridgeError, GameState
 from sts2_bridge.rendering import render_state_view
+from sts2_bridge.state_view import render_state_response, route_state_response
+from sts2_bridge.state_view.model import response_data
 from sts2_bridge.state_actions import effective_available_actions, has_recovery_options
 from sts2_bridge.trace import log_cli_call, should_log_cli_call, _now_iso
 
@@ -38,8 +41,6 @@ BaseUrlOption = Annotated[
     typer.Option("--base-url", help="STS2 Mod API base URL. Defaults to STS2_API_BASE_URL or localhost:8080."),
 ]
 TimeoutOption = Annotated[float, typer.Option("--api-timeout", help="HTTP request timeout in seconds.")]
-StateLayerOption = Annotated[str, typer.Option("--layer", help="State layer: view, filtered, raw.")]
-
 REST_RECOVERY_TARGETS = {
     "relic": (0.03, 0.333),
     "top-bar-relic": (0.03, 0.333),
@@ -74,52 +75,41 @@ def health(
     _run_text(lambda: _render_health(client.health()))
 
 
-@app.command()
-def state(
-    base_url: BaseUrlOption = None,
-    api_timeout: TimeoutOption = 10.0,
-    raw: Annotated[bool, typer.Option("--raw", help="Return the parsed full state payload.")] = False,
-    agent_view: Annotated[bool, typer.Option("--agent-view", help="Return a compact agent-oriented state view.")] = False,
-    view: Annotated[
-        str,
-        typer.Option("--view", help="Filtered schema view: brief, decision, combat, agent."),
-    ] = "brief",
-    layer: StateLayerOption = "view",
-    with_window: Annotated[
-        bool,
-        typer.Option("--with-window", help="Include macOS STS2 window/frontmost status when available."),
-    ] = False,
+@debug_app.command("route-render-samples")
+def debug_route_render_samples(
+    logs_dir: Annotated[Path, typer.Option("--logs-dir", help="Directory containing HTTP JSONL logs.")] = Path("logs/http"),
+    output_dir: Annotated[
+        Path,
+        typer.Option("--output-dir", help="Directory to rebuild with rendered route sample files."),
+    ] = Path("debug/route_render_samples"),
 ) -> None:
-    """Read the current game state."""
-    client = _client(base_url, api_timeout)
+    """Regenerate debug/route_render_samples from HTTP logs."""
 
     def command() -> str:
-        game_state = client.state()
-        selected_layer = _select_state_layer(raw=raw, agent_view=agent_view, layer=layer)
-        selected_view = _select_state_view(raw=raw, agent_view=agent_view, view=view)
-
-        if selected_layer == "raw":
-            data = _dump_model(game_state)
-        else:
-            data = build_state_view(game_state, selected_view)
-        if with_window:
-            data["window"] = _macos_window_status_or_error()
-
-        if selected_layer == "view":
-            return render_state_view(data)
-        return _to_yaml(data)
+        resolved_logs_dir = _resolve_logs_dir(logs_dir)
+        resolved_output_dir = _resolve_repo_path(output_dir)
+        result = _rebuild_route_render_samples(resolved_logs_dir, resolved_output_dir)
+        return _format_route_render_sample_result(result)
 
     _run_text(command)
 
 
 @app.command()
-def actions(
+def state(
     base_url: BaseUrlOption = None,
     api_timeout: TimeoutOption = 10.0,
+    raw: Annotated[bool, typer.Option("--raw", help="Return the raw parsed /state HTTP JSON response.")] = False,
 ) -> None:
-    """List actions available in the current state."""
+    """Read the current game state."""
     client = _client(base_url, api_timeout)
-    _run_text(lambda: _render_actions(build_actions_view(client.state())))
+
+    def command() -> str:
+        response = client.state_response()
+        if raw:
+            return _to_yaml(response)
+        return render_state_response(response)
+
+    _run_text(command)
 
 
 @app.command(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
@@ -130,7 +120,7 @@ def act(
     api_timeout: TimeoutOption = 10.0,
     raw_result: Annotated[
         bool,
-        typer.Option("--raw-result", help="Return the full action result and post-action agent view as text."),
+        typer.Option("--raw-result", help="Return the raw parsed /action HTTP JSON response."),
     ] = False,
 ) -> None:
     """Execute one game action. Extra tokens after ACTION are parsed as action args."""
@@ -145,27 +135,28 @@ def act(
                 retryable=True,
             )
         resolved_action = resolve_action(action, effective_available_actions(before))
-        args = parse_action_args(resolved_action, list(ctx.args))
+        raw_tokens = list(ctx.args)
+        args = parse_action_args(resolved_action, raw_tokens)
+        args = _complete_action_args_from_state(resolved_action, args, raw_tokens, before)
         _validate_action_against_state(resolved_action, before)
-        result = client.act(resolved_action, args)
-        embedded_after = result.state if isinstance(result.state, GameState) else None
-        after = _fresh_state_after_action(client, embedded_after)
-        if not raw_result:
-            return _render_action_result(
-                build_action_result_view(
-                    action=resolved_action,
-                    args=args,
-                    status=result.status,
-                    before=before,
-                    after=after,
+        try:
+            response = client.action_response(resolved_action, args)
+        except BridgeError as exc:
+            if exc.code in {"connection_failed", "timeout", "http_error"}:
+                output = render_action_response(
+                    None,
+                    request_action=resolved_action,
+                    request_args=args,
+                    transport_error=exc.to_dict()["error"],
                 )
-            )
-        data = _dump_model(result)
-        if after is None:
-            data["state_error"] = {"code": "state_unavailable", "message": "Could not read post-action state."}
-        else:
-            data["state"] = build_agent_view(after)
-        return _to_yaml(data)
+                raise RenderedCliError(output, code=1) from exc
+            raise
+        if raw_result:
+            return _to_yaml(response)
+        output = render_action_response(response, request_action=resolved_action, request_args=args)
+        if response.get("ok") is False:
+            raise RenderedCliError(output, code=1)
+        return output
 
     _run_text(command)
 
@@ -185,15 +176,17 @@ def wait(
         last_error: dict[str, Any] | None = None
         while time.monotonic() <= deadline:
             try:
-                game_state = client.state()
+                response = client.state_response()
             except BridgeError as exc:
                 last_error = exc.to_dict()["error"]
                 if not exc.retryable:
                     raise
                 time.sleep(interval)
                 continue
-            if effective_available_actions(game_state) or has_recovery_options(game_state):
-                return render_state_view(build_state_view(game_state, "brief"))
+            data = response_data(response)
+            actions = data.get("available_actions") if isinstance(data, dict) else []
+            if actions:
+                return render_state_response(response)
             time.sleep(interval)
         raise BridgeError(
             "wait_timeout",
@@ -425,6 +418,248 @@ def _client(base_url: str | None, timeout: float) -> Sts2Client:
     return Sts2Client(base_url or os.environ.get("STS2_API_BASE_URL", DEFAULT_BASE_URL), timeout=timeout)
 
 
+def _rebuild_route_render_samples(logs_dir: Path, output_dir: Path) -> dict[str, Any]:
+    if not logs_dir.exists() or not logs_dir.is_dir():
+        raise BridgeError(
+            "invalid_logs_dir",
+            "HTTP log directory does not exist.",
+            details={"logs_dir": str(logs_dir)},
+            retryable=False,
+        )
+    if output_dir.exists() and not output_dir.is_dir():
+        raise BridgeError(
+            "invalid_output_dir",
+            "Route render sample output path exists but is not a directory.",
+            details={"output_dir": str(output_dir)},
+            retryable=False,
+        )
+
+    log_files = sorted(logs_dir.glob("*.jsonl"))
+    if not log_files:
+        raise BridgeError(
+            "empty_logs_dir",
+            "HTTP log directory does not contain any JSONL files.",
+            details={"logs_dir": str(logs_dir)},
+            retryable=False,
+        )
+
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    counts: dict[str, int] = {}
+    files: list[dict[str, Any]] = []
+    errors: list[str] = []
+    total_lines = _count_file_lines(log_files)
+    with click.progressbar(length=total_lines, label="Rendering route samples") as progress:
+        for log_file in log_files:
+            with log_file.open("r", encoding="utf-8") as handle:
+                for line_no, line in enumerate(handle, 1):
+                    progress.update(1)
+                    if not line.strip():
+                        continue
+                    try:
+                        sample = _route_log_line(log_file, line_no, line)
+                    except Exception as exc:
+                        errors.append(f"{log_file}:{line_no}: {type(exc).__name__}: {exc}")
+                        continue
+                    if sample is None:
+                        continue
+                    route = sample["route"]
+                    counts[route] = counts.get(route, 0) + 1
+                    route_dir = output_dir / route
+                    route_dir.mkdir(parents=True, exist_ok=True)
+                    path = route_dir / _route_sample_filename(log_file, line_no, sample)
+                    path.write_text(sample["rendered"].rstrip() + "\n", encoding="utf-8")
+                    files.append(
+                        {
+                            "route": route,
+                            "path": path,
+                            "source": sample["source"],
+                            "line": line_no,
+                        }
+                    )
+
+    if errors:
+        error_path = output_dir / "_generation_errors.txt"
+        error_path.write_text("\n".join(errors) + "\n", encoding="utf-8")
+        raise BridgeError(
+            "route_render_sample_generation_failed",
+            "Some HTTP log records could not be routed or rendered.",
+            details={"errors": len(errors), "error_file": str(error_path)},
+            retryable=False,
+        )
+    if not files:
+        raise BridgeError(
+            "route_render_samples_empty",
+            "No routeable /state or /action HTTP records were found.",
+            details={"logs_dir": str(logs_dir)},
+            retryable=False,
+        )
+
+    index_path = output_dir / "index.txt"
+    index_path.write_text(_format_route_render_sample_index(logs_dir, output_dir, counts, files), encoding="utf-8")
+    return {
+        "logs_dir": logs_dir,
+        "output_dir": output_dir,
+        "routes": len(counts),
+        "samples": len(files),
+        "index": index_path,
+    }
+
+
+def _count_file_lines(paths: list[Path]) -> int:
+    total = 0
+    for path in paths:
+        with path.open("r", encoding="utf-8") as handle:
+            total += sum(1 for _ in handle)
+    return total
+
+
+def _resolve_logs_dir(logs_dir: Path) -> Path:
+    if logs_dir.exists() or logs_dir.is_absolute():
+        return logs_dir
+    repo_relative = _repo_root() / logs_dir
+    if repo_relative.exists():
+        return repo_relative
+    return logs_dir
+
+
+def _resolve_repo_path(path: Path) -> Path:
+    if path.is_absolute():
+        return path
+    return _repo_root() / path
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def _route_log_line(log_file: Path, line_no: int, line: str) -> dict[str, Any] | None:
+    record = json.loads(line)
+    request = record.get("request") if isinstance(record, dict) else None
+    if not isinstance(request, dict):
+        return None
+    method = request.get("method")
+    path = urlparse(request.get("url") or "").path
+    if method == "GET" and path == "/state":
+        return _route_state_log_record(log_file, line_no, record)
+    if method == "POST" and path == "/action":
+        return _route_action_log_record(log_file, line_no, record)
+    return None
+
+
+def _route_state_log_record(log_file: Path, line_no: int, record: dict[str, Any]) -> dict[str, Any] | None:
+    raw = _log_response_json(record)
+    if not isinstance(raw, dict):
+        return None
+    route = route_state_response(raw)
+    return {
+        "kind": "state",
+        "route": route.category,
+        "source": str(log_file),
+        "line": line_no,
+        "method": "GET",
+        "path": "/state",
+        "http_status": _log_status(record),
+        "rendered": render_state_response(raw),
+    }
+
+
+def _route_action_log_record(log_file: Path, line_no: int, record: dict[str, Any]) -> dict[str, Any] | None:
+    request_body = (record.get("request") or {}).get("body")
+    request_action = request_body.get("action") if isinstance(request_body, dict) else None
+    request_args = {key: value for key, value in request_body.items() if key != "action"} if isinstance(request_body, dict) else {}
+    raw = _log_response_json(record)
+    status = _log_status(record)
+    route = route_action_response(raw if isinstance(raw, dict) else None, request_action=request_action, http_status=status)
+    return {
+        "kind": "action",
+        "route": route.category,
+        "source": str(log_file),
+        "line": line_no,
+        "method": "POST",
+        "path": "/action",
+        "request_action": request_action,
+        "request_args": request_args,
+        "http_status": status,
+        "rendered": render_action_response(
+            raw if isinstance(raw, dict) else None,
+            request_action=request_action,
+            request_args=request_args,
+            http_status=status,
+        ),
+    }
+
+
+def _log_response_json(record: dict[str, Any]) -> Any:
+    response = record.get("response")
+    if not isinstance(response, dict):
+        return None
+    text = response.get("text")
+    if not isinstance(text, str) or not text:
+        return None
+    return json.loads(text)
+
+
+def _log_status(record: dict[str, Any]) -> int | None:
+    response = record.get("response")
+    if not isinstance(response, dict):
+        return None
+    status = response.get("status_code")
+    return status if isinstance(status, int) else None
+
+
+def _route_sample_filename(log_file: Path, line_no: int, sample: dict[str, Any]) -> str:
+    label = sample.get("request_action") or sample.get("method") or "sample"
+    return f"{log_file.stem}_l{line_no:05d}_{_safe_filename_part(label)}.txt"
+
+
+def _safe_filename_part(value: object) -> str:
+    text = str(value or "").strip().lower()
+    chars = [char if char.isalnum() or char in "._-" else "_" for char in text]
+    return "_".join("".join(chars).split("_")).strip("_") or "sample"
+
+
+def _format_route_render_sample_result(result: dict[str, Any]) -> str:
+    lines = [
+        "Route render samples regenerated.",
+        f"Logs: {result['logs_dir']}",
+        f"Output: {result['output_dir']}",
+        f"Routes: {result['routes']}",
+        f"Samples: {result['samples']}",
+        f"Index: {result['index']}",
+    ]
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _format_route_render_sample_index(
+    logs_dir: Path,
+    output_dir: Path,
+    counts: dict[str, int],
+    files: list[dict[str, Any]],
+) -> str:
+    lines = [
+        "Route render samples",
+        f"Logs: {logs_dir}",
+        f"Output: {output_dir}",
+        "",
+        f"Routes: {len(counts)}",
+        f"Samples: {len(files)}",
+        "",
+        "Counts:",
+    ]
+    for route in sorted(counts):
+        lines.append(f"{counts[route]:5d}  {route}")
+    lines.append("")
+    lines.append("Files:")
+    for item in files:
+        path = item["path"]
+        relative = path.relative_to(output_dir)
+        lines.append(f"{item['route']}\t{relative}\t{item['source']}:{item['line']}")
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _is_interactive_terminal() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
@@ -495,7 +730,8 @@ def _interactive_action_from_input(
 
     tokens = command.split()
     action = resolve_action(tokens[0], effective_available_actions(state))
-    return action, parse_action_args(action, tokens[1:])
+    args = parse_action_args(action, tokens[1:])
+    return action, _complete_action_args_from_state(action, args, tokens[1:], state)
 
 
 def _default_interactive_action(state: GameState) -> tuple[str, dict[str, Any]] | None:
@@ -503,10 +739,10 @@ def _default_interactive_action(state: GameState) -> tuple[str, dict[str, Any]] 
     non_card_actions = [action for action in actions if action != "play_card"]
     if len(actions) == 1 and actions[0] != "play_card":
         action = actions[0]
-        return action, parse_action_args(action, [])
+        return action, _complete_action_args_from_state(action, parse_action_args(action, []), [], state)
     if len(non_card_actions) == 1 and not _has_playable_cards(state):
         action = non_card_actions[0]
-        return action, parse_action_args(action, [])
+        return action, _complete_action_args_from_state(action, parse_action_args(action, []), [], state)
     return None
 
 
@@ -530,7 +766,7 @@ def _numeric_interactive_action(
             return "play_card", card_args
 
     action = resolve_action(str(index), actions)
-    return action, parse_action_args(action, [])
+    return action, _complete_action_args_from_state(action, parse_action_args(action, []), [], state)
 
 
 def _card_args_from_view(card_index: int, view: dict[str, Any]) -> dict[str, Any] | None:
@@ -577,6 +813,292 @@ def _validate_action_against_state(action: str, state: GameState) -> None:
         },
         retryable=False,
     )
+
+
+def _complete_action_args_from_state(
+    action: str,
+    args: dict[str, Any],
+    raw_tokens: list[str],
+    state: GameState,
+) -> dict[str, Any]:
+    completed = dict(args)
+    view = _state_action_index_view(state)
+    _complete_option_index(action, completed, raw_tokens, view)
+    _complete_play_card_target(action, completed, raw_tokens, view)
+    return completed
+
+
+def _state_action_index_view(state: GameState) -> dict[str, Any]:
+    data = _dump_model(state)
+    return {
+        "combat": {"playable": _playable_cards_for_args(state)},
+        "map": {"choices": _indexed_items(((data.get("map") or {}).get("available_nodes")))},
+        "event": {"options": _indexed_items(((data.get("event") or {}).get("options")), lock_key="is_locked")},
+        "timeline": {"slots": _indexed_items(((data.get("timeline") or {}).get("slots")), action_key="is_actionable")},
+        "rest": {"options": _indexed_items(((data.get("rest") or {}).get("options")), lock_key="is_locked")},
+        "reward": {
+            "rewards": _indexed_items(((data.get("reward") or {}).get("rewards")), claimable_key="claimable"),
+            "card_options": _indexed_items(((data.get("reward") or {}).get("card_options"))),
+        },
+        "selection": {"cards": _indexed_items(((data.get("selection") or {}).get("cards")))},
+        "character_select": {"options": _indexed_items(((data.get("character_select") or {}).get("options")))},
+        "shop": {
+            "cards": _indexed_items(((data.get("shop") or {}).get("cards")), affordable_key="enough_gold"),
+            "relics": _indexed_items(((data.get("shop") or {}).get("relics")), affordable_key="enough_gold"),
+            "potions": _indexed_items(((data.get("shop") or {}).get("potions")), affordable_key="enough_gold"),
+        },
+        "potions": _potions_for_args(data),
+    }
+
+
+def _playable_cards_for_args(state: GameState) -> list[dict[str, Any]]:
+    if state.combat is None:
+        return []
+    targets = [
+        {"target_index": enemy.index, "name": enemy.name}
+        for enemy in state.combat.enemies
+        if enemy.index is not None and enemy.is_alive is not False and enemy.is_hittable is not False
+    ]
+    return [
+        {
+            "card_index": card.index,
+            "requires_target": card.requires_target,
+            "valid_targets": targets if card.requires_target else [],
+        }
+        for card in state.combat.hand
+        if card.playable is True and card.index is not None
+    ]
+
+
+def _indexed_items(
+    items: Any,
+    *,
+    lock_key: str | None = None,
+    action_key: str | None = None,
+    claimable_key: str | None = None,
+    affordable_key: str | None = None,
+) -> list[dict[str, Any]]:
+    if not isinstance(items, list):
+        return []
+    result: list[dict[str, Any]] = []
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            result.append({"option_index": index})
+            continue
+        row = {"option_index": item.get("index", item.get("option_index", index))}
+        if lock_key is not None:
+            row["locked"] = item.get(lock_key) or item.get("locked")
+        if action_key is not None:
+            row["actionable"] = item.get(action_key)
+        if claimable_key is not None:
+            row["claimable"] = item.get(claimable_key)
+        if affordable_key is not None:
+            row["affordable"] = item.get(affordable_key)
+        result.append(row)
+    return result
+
+
+def _potions_for_args(data: dict[str, Any]) -> list[dict[str, Any]]:
+    potions = (data.get("run") or {}).get("potions")
+    if not isinstance(potions, list):
+        return []
+    result = []
+    for index, potion in enumerate(potions):
+        if not isinstance(potion, dict):
+            continue
+        result.append(
+            {
+                "index": potion.get("index", potion.get("i", index)),
+                "can_use": potion.get("can_use", potion.get("usable")),
+                "can_discard": potion.get("can_discard", potion.get("discard")),
+            }
+        )
+    return result
+
+
+def _complete_option_index(
+    action: str,
+    args: dict[str, Any],
+    raw_tokens: list[str],
+    view: dict[str, Any],
+) -> None:
+    if not _action_accepts_option_index(action):
+        return
+    indices = _valid_option_indices(action, view)
+    explicit = _explicit_arg_supplied(raw_tokens, {"option_index", "index", "potion_index"})
+
+    if "option_index" in args and explicit:
+        _validate_known_index(action, "option_index", args["option_index"], indices)
+        return
+    if "option_index" in args and raw_tokens:
+        _validate_known_index(action, "option_index", args["option_index"], indices)
+        return
+
+    if len(indices) == 1:
+        args["option_index"] = indices[0]
+        return
+    if len(indices) > 1:
+        args.pop("option_index", None)
+        raise BridgeError(
+            "ambiguous_action_args",
+            f"{action} requires explicit option_index because multiple choices are available.",
+            details={"action": action, "valid_option_index": indices},
+            retryable=False,
+        )
+
+
+def _complete_play_card_target(
+    action: str,
+    args: dict[str, Any],
+    raw_tokens: list[str],
+    view: dict[str, Any],
+) -> None:
+    if action != "play_card" or "card_index" not in args:
+        return
+    card = _playable_card(view, args.get("card_index"))
+    if card is None or not card.get("requires_target"):
+        return
+    target_indices = _target_indices(card.get("valid_targets"))
+    if "target_index" in args:
+        _validate_known_index(action, "target_index", args["target_index"], target_indices)
+        return
+    if _explicit_arg_supplied(raw_tokens, {"target_index"}):
+        return
+    if len(target_indices) == 1:
+        args["target_index"] = target_indices[0]
+        return
+    if len(target_indices) > 1:
+        raise BridgeError(
+            "ambiguous_action_args",
+            "play_card requires explicit target_index because multiple targets are available.",
+            details={"action": action, "card_index": args.get("card_index"), "valid_target_index": target_indices},
+            retryable=False,
+        )
+
+
+def _action_accepts_option_index(action: str) -> bool:
+    return action.startswith("buy_") or action in {
+        "choose_map_node",
+        "claim_reward",
+        "choose_event_option",
+        "choose_rest_option",
+        "choose_reward_card",
+        "choose_timeline_epoch",
+        "select_character",
+        "select_deck_card",
+        "use_potion",
+        "discard_potion",
+    }
+
+
+def _valid_option_indices(action: str, view: dict[str, Any]) -> list[int]:
+    if action == "choose_map_node":
+        return _indices((view.get("map") or {}).get("choices"))
+    if action == "choose_event_option":
+        return _indices((view.get("event") or {}).get("options"), unlocked_only=True)
+    if action == "choose_timeline_epoch":
+        return _indices((view.get("timeline") or {}).get("slots"), actionable_only=True)
+    if action == "choose_rest_option":
+        return _indices((view.get("rest") or {}).get("options"), actionable_only=True, unlocked_only=True)
+    if action == "claim_reward":
+        return _indices((view.get("reward") or {}).get("rewards"), claimable_only=True)
+    if action == "choose_reward_card":
+        return _indices((view.get("reward") or {}).get("card_options"))
+    if action == "select_deck_card":
+        return _indices((view.get("selection") or {}).get("cards"))
+    if action == "select_character":
+        return _indices((view.get("character_select") or {}).get("options"))
+    if action == "buy_card":
+        return _indices((view.get("shop") or {}).get("cards"), affordable_only=True)
+    if action == "buy_relic":
+        return _indices((view.get("shop") or {}).get("relics"), affordable_only=True)
+    if action == "buy_potion":
+        return _indices((view.get("shop") or {}).get("potions"), affordable_only=True)
+    if action in {"use_potion", "discard_potion"}:
+        key = "can_use" if action == "use_potion" else "can_discard"
+        return [
+            potion["index"]
+            for potion in view.get("potions") or []
+            if isinstance(potion, dict) and potion.get(key) and isinstance(potion.get("index"), int)
+        ]
+    return []
+
+
+def _indices(
+    items: Any,
+    *,
+    actionable_only: bool = False,
+    unlocked_only: bool = False,
+    claimable_only: bool = False,
+    affordable_only: bool = False,
+) -> list[int]:
+    if not isinstance(items, list):
+        return []
+    indices: list[int] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if actionable_only and item.get("actionable") is False:
+            continue
+        if unlocked_only and item.get("locked") is True:
+            continue
+        if claimable_only and item.get("claimable") is False:
+            continue
+        if affordable_only and item.get("affordable") is False:
+            continue
+        index = item.get("option_index")
+        if isinstance(index, int):
+            indices.append(index)
+    return indices
+
+
+def _target_indices(items: Any) -> list[int]:
+    if not isinstance(items, list):
+        return []
+    indices: list[int] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        index = item.get("target_index")
+        if isinstance(index, int):
+            indices.append(index)
+    return indices
+
+
+def _playable_card(view: dict[str, Any], card_index: Any) -> dict[str, Any] | None:
+    combat = view.get("combat") or {}
+    cards = combat.get("playable") or combat.get("playable_cards") or []
+    for card in cards:
+        if isinstance(card, dict) and card.get("card_index") == card_index:
+            return card
+    return None
+
+
+def _validate_known_index(action: str, name: str, value: Any, valid_indices: list[int]) -> None:
+    if not valid_indices or value in valid_indices:
+        return
+    raise BridgeError(
+        "invalid_action_args",
+        f"{action} received invalid {name}.",
+        details={"action": action, name: value, f"valid_{name}": valid_indices},
+        retryable=False,
+    )
+
+
+def _explicit_arg_supplied(tokens: list[str], names: set[str]) -> bool:
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if not token.startswith("--"):
+            return True
+        key = token[2:].split("=", 1)[0].replace("-", "_")
+        if key in names:
+            return True
+        if "=" not in token and index + 1 < len(tokens) and not tokens[index + 1].startswith("--"):
+            index += 2
+        else:
+            index += 1
+    return False
 
 
 def _claimable_unloaded_card_rewards(state: GameState) -> list[dict[str, Any]]:
@@ -636,6 +1158,17 @@ def _run_text(command: Any) -> None:
             output=output + "\n",
         )
         raise typer.Exit(code=1) from exc
+    except RenderedCliError as exc:
+        output = exc.output
+        typer.echo(output, nl=not output.endswith("\n"), err=False)
+        _log_cli_text_result(
+            context=context,
+            started_at=started_at,
+            started_monotonic=started_monotonic,
+            return_code=exc.code,
+            output=output if output.endswith("\n") else output + "\n",
+        )
+        raise typer.Exit(code=exc.code) from exc
     except Exception as exc:
         output = f"ERROR cli_error: {type(exc).__name__}: {exc}"
         typer.echo(output, err=False)
@@ -647,6 +1180,13 @@ def _run_text(command: Any) -> None:
             output=output + "\n",
         )
         raise typer.Exit(code=1) from exc
+
+
+class RenderedCliError(RuntimeError):
+    def __init__(self, output: str, *, code: int = 1) -> None:
+        super().__init__(output)
+        self.output = output
+        self.code = code
 
 
 def _log_cli_text_result(
@@ -688,46 +1228,6 @@ def _render_health(data: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _render_actions(data: dict[str, Any]) -> str:
-    actions = data.get("available_actions") or []
-    if not actions:
-        return "Legal actions: none\n"
-    lines = ["Legal actions:"]
-    for index, action in enumerate(actions):
-        name = action.get("action") if isinstance(action, dict) else str(action)
-        args = action.get("args") if isinstance(action, dict) else []
-        lines.append(f"[{index}] {_action_signature_text(name, args)}")
-    return "\n".join(lines) + "\n"
-
-
-def _render_action_result(data: dict[str, Any]) -> str:
-    action = data.get("action")
-    action_name = action.get("name") if isinstance(action, dict) else action
-    args = action.get("args") if isinstance(action, dict) else None
-    lines = [
-        f"Action: {action_name or '?'}",
-        f"Status: {data.get('status') or '?'}",
-    ]
-    if args:
-        lines.append(f"Args: {_inline_mapping(args)}")
-    changes = data.get("changes")
-    if changes:
-        lines.extend(["", "Changes:", _to_yaml(changes).rstrip()])
-    state = data.get("state")
-    if state:
-        lines.extend(["", "State:", render_state_view(state).rstrip()])
-        if _state_has_rest_recovery_options(state):
-            lines.extend(
-                [
-                    "",
-                    "REST recovery:",
-                    "The API accepted the action but left REST without an executable rest-progress action.",
-                    "Next: sts2 debug recover-rest",
-                ]
-            )
-    return "\n".join(lines) + "\n"
-
-
 def _render_error(exc: BridgeError) -> str:
     lines = [f"ERROR {exc.code}: {exc.message}"]
     if exc.details:
@@ -745,109 +1245,11 @@ def _inline_mapping(data: dict[str, Any]) -> str:
     return ", ".join(f"{key}={value}" for key, value in data.items())
 
 
-def _action_signature_text(name: str, args: list[Any]) -> str:
-    if not args:
-        return name
-    parts: list[str] = []
-    for arg in args:
-        if not isinstance(arg, dict):
-            continue
-        arg_name = arg.get("name")
-        if not arg_name:
-            continue
-        if arg_name == "option_index":
-            parts.append("option_index=0")
-        elif arg.get("required") is True:
-            parts.append(str(arg_name))
-        else:
-            parts.append(f"optional {arg_name}")
-    return f"{name}({', '.join(parts)})" if parts else name
-
-
-def _state_has_rest_recovery_options(state: Any) -> bool:
-    if not isinstance(state, dict) or state.get("screen") != "REST":
-        return False
-    rest = state.get("rest")
-    if not isinstance(rest, dict):
-        return False
-    options = rest.get("options")
-    if not isinstance(options, list):
-        return False
-    return any(isinstance(option, dict) and option.get("source") == "fallback" for option in options)
-
-
-def _select_state_view(*, raw: bool, agent_view: bool, view: str) -> str:
-    if raw:
-        return "raw"
-    if agent_view:
-        return "agent"
-    if view not in {"brief", "decision", "combat", "agent"}:
-        raise BridgeError(
-            "invalid_cli_arg",
-            "--view must be one of: brief, decision, combat, agent.",
-            details={"view": view},
-            retryable=False,
-        )
-    return view
-
-
-def _select_state_layer(*, raw: bool, agent_view: bool, layer: str) -> str:
-    if raw:
-        return "raw"
-    if agent_view:
-        return "filtered"
-    if layer not in {"view", "filtered", "raw"}:
-        raise BridgeError(
-            "invalid_cli_arg",
-            "--layer must be one of: view, filtered, raw.",
-            details={"layer": layer},
-            retryable=False,
-        )
-    return layer
-
-
 def _try_state(client: Sts2Client) -> GameState | None:
     try:
         return client.state()
     except BridgeError:
         return None
-
-
-def _fresh_state_after_action(client: Sts2Client, fallback: GameState | None) -> GameState | None:
-    last_state: GameState | None = None
-    for attempt in range(4):
-        state = _try_state(client)
-        if state is None:
-            return fallback if last_state is None else last_state
-        last_state = state
-        if not _looks_like_transition_state(state):
-            return state
-        if attempt < 3:
-            time.sleep(0.15)
-    return last_state or fallback
-
-
-def _looks_like_transition_state(state: GameState) -> bool:
-    if state.screen != "COMBAT" or state.combat is None:
-        return False
-    if effective_available_actions(state):
-        return False
-    player = state.combat.player
-    if player is None:
-        return True
-    unknown_player = player.current_hp is None and player.max_hp is None and player.energy is None and player.block is None
-    no_combat_content = not state.combat.enemies and not state.combat.hand
-    return unknown_player and no_combat_content
-
-
-def _macos_window_status_or_error() -> dict[str, Any]:
-    try:
-        _require_macos()
-        from sts2_bridge.macos_screenshot import window_status
-
-        return window_status()
-    except BridgeError as exc:
-        return {"error": exc.to_dict()["error"]}
 
 
 def _recovery_state_summary(state: GameState) -> dict[str, Any]:

@@ -1,0 +1,13 @@
+{
+  "error": {
+    "code": "invalid_action",
+    "details": {
+      "action": "choose_rest_option",
+      "screen": "REST"
+    },
+    "message": "Action is not available in the current state.",
+    "retryable": false
+  },
+  "ok": false,
+  "request_id": "req_20260508_200554_5247_801"
+}

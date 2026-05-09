@@ -1,0 +1,15 @@
+{
+  "error": {
+    "code": "invalid_target",
+    "details": {
+      "action": "play_card",
+      "card_id": "STRIKE_SILENT",
+      "target_index_space": "enemies",
+      "target_type": "AnyEnemy"
+    },
+    "message": "This card requires target_index.",
+    "retryable": false
+  },
+  "ok": false,
+  "request_id": "req_20260508_212256_6821_1381"
+}

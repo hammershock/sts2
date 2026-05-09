@@ -1,0 +1,12 @@
+{
+  "error": {
+    "code": "invalid_request",
+    "details": {
+      "action": "buy_card"
+    },
+    "message": "buy_card requires option_index.",
+    "retryable": false
+  },
+  "ok": false,
+  "request_id": "req_20260508_191405_3921_178"
+}
